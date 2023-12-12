@@ -5,6 +5,7 @@ A device that allows us to implement operation on a single qudit. The backend is
 import requests, json, time
 from pennylane import DeviceError, QubitDevice
 
+
 class KoreaQuantumEmulator(QubitDevice):
     """
     The base class for all devices that call to an external server.
@@ -16,7 +17,7 @@ class KoreaQuantumEmulator(QubitDevice):
     version = "0.0.1"
     author = "Inho Jeon"
     accessToken = None
-    resourceId ="aae7709c-e335-4420-b231-6f8c88aa85be"
+    resourceId = "aae7709c-e335-4420-b231-6f8c88aa85be"
 
     operations = {"PauliX", "RX", "CNOT", "RY", "RZ"}
     observables = {"PauliZ", "PauliX", "PauliY"}
@@ -33,16 +34,18 @@ class KoreaQuantumEmulator(QubitDevice):
     def _get_token(self):
         print("get KQ Cloud Token")
         api_url = f"http://150.183.154.20:31001/oauth/token"
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        data = {'grant_type': 'apikey',
-                'accessKeyId': self.accessKeyId,
-                'secretAccessKey': self.secretAccessKey}
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        data = {
+            "grant_type": "apikey",
+            "accessKeyId": self.accessKeyId,
+            "secretAccessKey": self.secretAccessKey,
+        }
         requestData = requests.post(api_url, data=data, headers=headers)
-        if requestData.status_code == 200 :
+        if requestData.status_code == 200:
             jsondata = requestData.json()
             self.accessToken = jsondata.get("accessToken")
             return True
-        else : 
+        else:
             raise DeviceError(
                 f"/oauth/token error. req code : {requestData.status_code}"
             )
@@ -50,9 +53,12 @@ class KoreaQuantumEmulator(QubitDevice):
     def _job_submit(self, circuits):
         print("job submit")
         URL = "http://150.183.154.20:31001/v2/jobs"
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.accessToken}"}
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.accessToken}",
+        }
         data = {
-            "resource" : { "id": "aae7709c-e335-4420-b231-6f8c88aa85be" },
+            "resource": {"id": "aae7709c-e335-4420-b231-6f8c88aa85be"},
             "code": circuits[0].to_openqasm(),
             "shot": self.shots,
             "name": "test job",
@@ -63,9 +69,7 @@ class KoreaQuantumEmulator(QubitDevice):
         if res.status_code == 201:
             return res.json().get("id")
         else:
-            raise DeviceError(
-                f"Job sumbit error. req code : {res.status_code}"
-            )
+            raise DeviceError(f"Job sumbit error. req code : {res.status_code}")
 
     def _check_job_status(self, jobId):
         timeout = 6000
@@ -73,16 +77,15 @@ class KoreaQuantumEmulator(QubitDevice):
 
         while time.time() < timeout_start + timeout:
             URL = f"http://150.183.154.20:31001/v2/jobs/{jobId}"
-            headers = { "Authorization": f"Bearer {self.accessToken}"}
+            headers = {"Authorization": f"Bearer {self.accessToken}"}
             res = requests.get(URL, headers=headers)
             status = res.json().get("status")
             print(f"job status check: {status}")
-            
+
             if status == "COMPLETED":
                 return res.json().get("result")
             time.sleep(1)
         raise DeviceError("Job timeout")
-          
 
     def batch_execute(
         self, circuits
