@@ -7,6 +7,7 @@ with open("pennylane_kq/_version.py") as f:
 
 pennylane_devices_list = [
     "kq.emulator = pennylane_kq:KoreaQuantumEmulator",
+    "kq.local_emulator = pennylane_kq:KoreaQuantumLocalEmulator",
 ]
 
 # requirements = ["pennylane>=0.19,<0.30"]
