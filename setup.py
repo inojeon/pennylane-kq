@@ -7,6 +7,7 @@ with open("pennylane_kq/_version.py") as f:
 
 pennylane_devices_list = [
     "kq.emulator = pennylane_kq:KoreaQuantumEmulator",
+    "kq.hardware = pennylane_kq:KoreaQuantumHardware",
     "kq.local_emulator = pennylane_kq:KoreaQuantumLocalEmulator",
 ]
 

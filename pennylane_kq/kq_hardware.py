@@ -6,18 +6,18 @@ import requests, json, time
 from pennylane import DeviceError, QubitDevice
 
 
-class KoreaQuantumEmulator(QubitDevice):
+class KoreaQuantumHardware(QubitDevice):
     """
     The base class for all devices that call to an external server.
     """
 
-    name = "Korea Quantum Emulator"
-    short_name = "kq.emulator"
+    name = "Korea Quantum Hardware"
+    short_name = "kq.hardware"
     pennylane_requires = ">=0.16.0"
     version = "0.0.1"
     author = "Inho Jeon"
     accessToken = None
-    resourceId = "aae7709c-e335-4420-b231-6f8c88aa85be"
+    resourceId = "5893a46f-c0f7-4d83-99cb-f86103e2b694"
 
     operations = {"PauliX", "RX", "CNOT", "RY", "RZ"}
     observables = {"PauliZ", "PauliX", "PauliY"}
@@ -26,7 +26,7 @@ class KoreaQuantumEmulator(QubitDevice):
         super().__init__(wires=wires, shots=shots)
         self.accessKeyId = accessKeyId
         self.secretAccessKey = secretAccessKey
-        # self.hardware_options = hardware_options or "kqEmulator"
+        # self.hardware_options = hardware_options or "kqHardware"
 
     def apply(self, operations, **kwargs):
         self.run(self._circuit)

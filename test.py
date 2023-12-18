@@ -1,7 +1,7 @@
 import pennylane as qml
 
-accessKeyId = "GIPZ0SG2SCTDGT1HEANA6L6F4VPAIOGJ"
-secretAccessKey = "BhPxW18nhxLuB65sYJ6lYMywQPS3PM7QFgsIML8e26I="
+accessKeyId = "9LUUDMA4OYRYG73LM703SQF7FG1JHDNT"
+secretAccessKey = "x3om700rKpo+693om1/bEt3rKBilEMJnaAXqGdWuuqE="
 
 
 dev = qml.device(
@@ -12,12 +12,13 @@ dev = qml.device(
     secretAccessKey=secretAccessKey,
 )
 
-
-# dev = qml.device(
-#     "kq.local_emulator",
-#     wires=2,
-#     shots=2048,
-# )
+dev2 = qml.device(
+    "kq.hardware",
+    wires=2,
+    shots=2048,
+    accessKeyId=accessKeyId,
+    secretAccessKey=secretAccessKey,
+)
 
 
 @qml.qnode(dev)
@@ -27,6 +28,15 @@ def circuit():
     return qml.counts()
 
 
+@qml.qnode(dev2)
+def circuit2():
+    qml.Hadamard(wires=1)
+    qml.CNOT(wires=[0, 1])
+    return qml.counts()
+
+
 # All counts 만 구현
 result = circuit()
 print(result)
+result2 = circuit2()
+print(result2)
