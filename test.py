@@ -12,6 +12,18 @@ dev = qml.device(
     secretAccessKey=secretAccessKey,
 )
 
+
+@qml.qnode(dev)
+def circuit():
+    qml.Hadamard(wires=1)
+    qml.CNOT(wires=[0, 1])
+    return qml.counts()
+
+
+result = circuit()
+print(result)
+
+
 dev2 = qml.device(
     "kq.hardware",
     wires=2,
@@ -19,13 +31,6 @@ dev2 = qml.device(
     accessKeyId=accessKeyId,
     secretAccessKey=secretAccessKey,
 )
-
-
-@qml.qnode(dev)
-def circuit():
-    qml.Hadamard(wires=1)
-    qml.CNOT(wires=[0, 1])
-    return qml.counts()
 
 
 @qml.qnode(dev2)
@@ -36,7 +41,5 @@ def circuit2():
 
 
 # All counts 만 구현
-result = circuit()
-print(result)
 result2 = circuit2()
 print(result2)
