@@ -7,6 +7,7 @@ with open("pennylane_kq/_version.py") as f:
 
 pennylane_devices_list = [
     "kq.emulator = pennylane_kq:KoreaQuantumEmulator",
+    "kq.emulator.aws = pennylane_kq:KoreaQuantumEmulatorAWS",
     "kq.hardware = pennylane_kq:KoreaQuantumHardware",
     "kq.local_emulator = pennylane_kq:KoreaQuantumLocalEmulator",
 ]
@@ -17,6 +18,8 @@ setup(
     name="pennylane-kq",
     version=version,
     description="A Pennylane plugin for KQ Cloud System",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     url="https://www.github.com/inojeon/pennylane-kq",
     author="Inho Jeon",
     author_email="inojeon@kisti.re.kr",

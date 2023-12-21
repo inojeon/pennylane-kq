@@ -6,18 +6,18 @@ import requests, json, time
 from pennylane import DeviceError, QubitDevice
 
 
-class KoreaQuantumHardware(QubitDevice):
+class KoreaQuantumEmulatorAWS(QubitDevice):
     """
     The base class for all devices that call to an external server.
     """
 
-    name = "Korea Quantum Hardware"
-    short_name = "kq.hardware"
+    name = "Korea Quantum Emulator AWS"
+    short_name = "kq.emulator.aws"
     pennylane_requires = ">=0.16.0"
     version = "0.0.1"
     author = "Inho Jeon"
     accessToken = None
-    resourceId = "18208724-e51f-4bab-b635-298ea07070b2"
+    resourceId = "aae7709c-e335-4420-b231-6f8c88aa85be"
 
     operations = {"PauliX", "RX", "CNOT", "RY", "RZ"}
     observables = {"PauliZ", "PauliX", "PauliY"}
@@ -26,14 +26,14 @@ class KoreaQuantumHardware(QubitDevice):
         super().__init__(wires=wires, shots=shots)
         self.accessKeyId = accessKeyId
         self.secretAccessKey = secretAccessKey
-        # self.hardware_options = hardware_options or "kqHardware"
+        # self.hardware_options = hardware_options or "kqEmulator"
 
     def apply(self, operations, **kwargs):
         self.run(self._circuit)
 
     def _get_token(self):
         print("get KQ Cloud Token")
-        api_url = f"http://150.183.154.20:31001/oauth/token"
+        api_url = f"http://3.39.145.223:31001/oauth/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
             "grant_type": "apikey",
@@ -52,13 +52,13 @@ class KoreaQuantumHardware(QubitDevice):
 
     def _job_submit(self, circuits):
         print("job submit")
-        URL = "http://150.183.154.20:31001/v2/jobs"
+        URL = "http://3.39.145.223:31001/v2/jobs"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.accessToken}",
         }
         data = {
-            "resource": {"id": self.resourceId},
+            "resource": {"id": "aae7709c-e335-4420-b231-6f8c88aa85be"},
             "code": circuits[0].to_openqasm(),
             "shot": self.shots,
             "name": "test job",
@@ -76,7 +76,7 @@ class KoreaQuantumHardware(QubitDevice):
         timeout_start = time.time()
 
         while time.time() < timeout_start + timeout:
-            URL = f"http://150.183.154.20:31001/v2/jobs/{jobId}"
+            URL = f"http://3.39.145.223:31001/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
             res = requests.get(URL, headers=headers)
             status = res.json().get("status")

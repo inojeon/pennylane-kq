@@ -4,18 +4,27 @@ accessKeyId = "9LUUDMA4OYRYG73LM703SQF7FG1JHDNT"
 secretAccessKey = "x3om700rKpo+693om1/bEt3rKBilEMJnaAXqGdWuuqE="
 
 
+# dev = qml.device(
+#     "kq.emulator",
+#     wires=2,
+#     shots=2048,
+#     accessKeyId=accessKeyId,
+#     secretAccessKey=secretAccessKey,
+# )
+
+
 dev = qml.device(
-    "kq.emulator",
+    "default.qubit",
     wires=2,
     shots=2048,
-    accessKeyId=accessKeyId,
-    secretAccessKey=secretAccessKey,
+    # accessKeyId=accessKeyId,
+    # secretAccessKey=secretAccessKey,
 )
 
 
 @qml.qnode(dev)
 def circuit():
-    qml.Hadamard(wires=1)
+    qml.Hadamard(wires=0)
     qml.CNOT(wires=[0, 1])
     return qml.counts()
 

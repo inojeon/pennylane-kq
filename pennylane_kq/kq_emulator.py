@@ -17,7 +17,7 @@ class KoreaQuantumEmulator(QubitDevice):
     version = "0.0.1"
     author = "Inho Jeon"
     accessToken = None
-    resourceId = "aae7709c-e335-4420-b231-6f8c88aa85be"
+    resourceId = "f8284e6e-d97e-4afc-a015-39d382273a99"
 
     operations = {"PauliX", "RX", "CNOT", "RY", "RZ"}
     observables = {"PauliZ", "PauliX", "PauliY"}
@@ -33,7 +33,7 @@ class KoreaQuantumEmulator(QubitDevice):
 
     def _get_token(self):
         print("get KQ Cloud Token")
-        api_url = f"http://3.39.145.223:31001/oauth/token"
+        api_url = f"http://150.183.154.20:31001/oauth/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
             "grant_type": "apikey",
@@ -52,13 +52,13 @@ class KoreaQuantumEmulator(QubitDevice):
 
     def _job_submit(self, circuits):
         print("job submit")
-        URL = "http://3.39.145.223:31001/v2/jobs"
+        URL = "http://150.183.154.20:31001/v2/jobs"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.accessToken}",
         }
         data = {
-            "resource": {"id": "aae7709c-e335-4420-b231-6f8c88aa85be"},
+            "resource": {"id": self.resourceId},
             "code": circuits[0].to_openqasm(),
             "shot": self.shots,
             "name": "test job",
@@ -76,7 +76,7 @@ class KoreaQuantumEmulator(QubitDevice):
         timeout_start = time.time()
 
         while time.time() < timeout_start + timeout:
-            URL = f"http://3.39.145.223:31001/v2/jobs/{jobId}"
+            URL = f"http://150.183.154.20:31001/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
             res = requests.get(URL, headers=headers)
             status = res.json().get("status")
