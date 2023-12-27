@@ -59,7 +59,7 @@ class KoreaQuantumHardware(QubitDevice):
         }
         data = {
             "resource": {"id": self.resourceId},
-            "code": circuits[0].to_openqasm(),
+            "input_file": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
             "shot": self.shots,
             "name": "test job",
             "type": "QASM",

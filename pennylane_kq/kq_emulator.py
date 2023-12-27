@@ -19,7 +19,7 @@ class KoreaQuantumEmulator(QubitDevice):
     accessToken = None
     resourceId = "f8284e6e-d97e-4afc-a015-39d382273a99"
 
-    operations = {"PauliX", "RX", "CNOT", "RY", "RZ"}
+    operations = {"PauliX", "RX", "CNOT", "RY", "RZ", "Hadamard"}
     observables = {"PauliZ", "PauliX", "PauliY"}
 
     def __init__(self, wires=4, shots=1024, accessKeyId=None, secretAccessKey=None):
@@ -59,7 +59,7 @@ class KoreaQuantumEmulator(QubitDevice):
         }
         data = {
             "resource": {"id": self.resourceId},
-            "code": circuits[0].to_openqasm(),
+            "input_file": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
             "shot": self.shots,
             "name": "test job",
             "type": "QASM",

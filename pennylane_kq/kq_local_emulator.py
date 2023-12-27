@@ -19,7 +19,7 @@ class KoreaQuantumLocalEmulator(QubitDevice):
     version = "0.0.1"
     author = "Inho Jeon"
 
-    operations = {"PauliX", "RX", "CNOT", "RY", "RZ"}
+    operations = {"PauliX", "RX", "CNOT", "RY", "RZ", "Hadamard"}
     observables = {"PauliZ", "PauliX", "PauliY"}
 
     def __init__(self, wires=4, shots=1024):
@@ -30,10 +30,12 @@ class KoreaQuantumLocalEmulator(QubitDevice):
         # self.run(self._circuit)
 
     def _job_submit(self, circuits):
+        # print(circuits[0].wires)
+        # print(circuits[0].to_openqasm(wires=sorted(circuits[0].wires)))
         URL = "http://localhost:8000/job/"
         headers = {"Content-Type": "application/json"}
         data = {
-            "input_file": circuits[0].to_openqasm(),
+            "input_file": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
             "shot": self.shots,
             "type": "qasm",
         }

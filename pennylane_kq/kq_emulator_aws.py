@@ -59,7 +59,7 @@ class KoreaQuantumEmulatorAWS(QubitDevice):
         }
         data = {
             "resource": {"id": "aae7709c-e335-4420-b231-6f8c88aa85be"},
-            "code": circuits[0].to_openqasm(),
+            "input_file": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
             "shot": self.shots,
             "name": "test job",
             "type": "QASM",
