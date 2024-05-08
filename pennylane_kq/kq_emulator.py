@@ -33,7 +33,7 @@ class KoreaQuantumEmulator(QubitDevice):
 
     def _get_token(self):
         print("get KQ Cloud Token")
-        api_url = f"http://150.183.154.20:31001/oauth/token"
+        api_url = f"http://150.183.154.20/oauth/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
             "grant_type": "apikey",
@@ -52,14 +52,14 @@ class KoreaQuantumEmulator(QubitDevice):
 
     def _job_submit(self, circuits):
         print("job submit")
-        URL = "http://150.183.154.20:31001/v2/jobs"
+        URL = "http://150.183.154.20/v2/jobs"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.accessToken}",
         }
         data = {
             "resource": {"id": self.resourceId},
-            "input_file": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
+            "code": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
             "shot": self.shots,
             "name": "test job",
             "type": "QASM",
@@ -76,7 +76,7 @@ class KoreaQuantumEmulator(QubitDevice):
         timeout_start = time.time()
 
         while time.time() < timeout_start + timeout:
-            URL = f"http://150.183.154.20:31001/v2/jobs/{jobId}"
+            URL = f"http://150.183.154.20/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
             res = requests.get(URL, headers=headers)
             status = res.json().get("status")
@@ -87,14 +87,46 @@ class KoreaQuantumEmulator(QubitDevice):
             time.sleep(1)
         raise DeviceError("Job timeout")
 
-    def batch_execute(
-        self, circuits
-    ):  # pragma: no cover, pylint:disable=arguments-differ
-        # print(self.accessKeyId, self.secretAccessKey)
+    def _convert_counts_to_samples(self, count_datas, wires):
+        import numpy as np
+
+        first = True
+        result = None
+
+        for hex_value, count in count_datas.items():
+            # 16진수 값을 10진수로 변환
+            decimal_value = int(hex_value, 16)
+
+            if decimal_value >= 2**wires:
+                decimal_value = 2**wires - 1
+            # 10진수 값을 지정된 자릿수의 이진수 배열로 변환
+            binary_array = np.array([int(x) for x in f"{decimal_value:0{wires}b}"])
+            # 지정된 횟수만큼 배열을 반복하여 결과 리스트에 추가
+            expanded_array = np.tile(binary_array, (count, 1))
+            # 첫 번째 배열인 경우 result를 초기화
+            if first:
+                result = expanded_array
+                first = False
+            else:
+                result = np.vstack((result, expanded_array))
+        return result
+
+    def batch_execute(self, circuits):
         if not self.accessToken:
             self._get_token()
 
-        jobId = self._job_submit(circuits)
-        result = self._check_job_status(jobId)
-        # print(jobId)
-        return [result]
+        jobUUID = self._job_submit(circuits)
+        res_result = self._check_job_status(jobUUID)
+
+        results = []
+        for circuit in circuits:
+            self._samples = self._convert_counts_to_samples(
+                res_result, circuit.num_wires
+            )
+
+            res = self.statistics(circuit)
+            single_measurement = len(circuit.measurements) == 1
+            res = res[0] if single_measurement else tuple(res)
+            results.append(res)
+
+        return results

@@ -32,7 +32,7 @@ class KoreaQuantumLocalEmulator(QubitDevice):
     def _job_submit(self, circuits):
         # print(circuits[0].wires)
         # print(circuits[0].to_openqasm(wires=sorted(circuits[0].wires)))
-        URL = "http://localhost:8000/job/"
+        URL = "http://localhost:8000/job"
         headers = {"Content-Type": "application/json"}
         data = {
             "input_file": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
@@ -53,19 +53,51 @@ class KoreaQuantumLocalEmulator(QubitDevice):
         timeout_start = time.time()
 
         while time.time() < timeout_start + timeout:
-            URL = f"http://localhost:8000/job/{jobUUID}/status/"
+            URL = f"http://localhost:8000/job/{jobUUID}/status"
             res = requests.get(URL)
             time.sleep(1)
             if res.json().get("status") == "SUCCESS":
-                URL = f"http://localhost:8000/job/{jobUUID}/result/"
+                URL = f"http://localhost:8000/job/{jobUUID}/result"
                 res = requests.get(URL)
                 return res.json()
 
-    def batch_execute(
-        self, circuits
-    ):  # pragma: no cover, pylint:disable=arguments-differ
-        # print(self.accessKeyId, self.secretAccessKey)
-        jobUUID = self._job_submit(circuits)
-        result = self._check_job_status(jobUUID)
+    def _convert_counts_to_samples(self, count_datas, wires):
+        import numpy as np
 
-        return [result["results"][0]["data"]["counts"]]
+        first = True
+        result = None
+
+        for hex_value, count in count_datas.items():
+            # 16진수 값을 10진수로 변환
+            decimal_value = int(hex_value, 16)
+
+            if decimal_value >= 2**wires:
+                decimal_value = 2**wires - 1
+            # 10진수 값을 지정된 자릿수의 이진수 배열로 변환
+            binary_array = np.array([int(x) for x in f"{decimal_value:0{wires}b}"])
+            # 지정된 횟수만큼 배열을 반복하여 결과 리스트에 추가
+            expanded_array = np.tile(binary_array, (count, 1))
+            # 첫 번째 배열인 경우 result를 초기화
+            if first:
+                result = expanded_array
+                first = False
+            else:
+                result = np.vstack((result, expanded_array))
+        return result
+
+    def batch_execute(self, circuits):
+        jobUUID = self._job_submit(circuits)
+        res_results = self._check_job_status(jobUUID)
+
+        results = []
+        for circuit, res_result in zip(circuits, res_results["results"]):
+            self._samples = self._convert_counts_to_samples(
+                res_result["data"]["counts"], circuit.num_wires
+            )
+
+            res = self.statistics(circuit)
+            single_measurement = len(circuit.measurements) == 1
+            res = res[0] if single_measurement else tuple(res)
+            results.append(res)
+
+        return results
