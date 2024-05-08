@@ -34,3 +34,22 @@ KISTI
 
 If you are having issues, please let us know by posting the issue on our Github issue tracker, or
 by asking a question in the forum.
+
+## pypi 업데이트 방법
+
+\_version.py 에서 버전 변경,
+
+```
+python setup.py sdist bdist_wheel
+python -m twine upload  --skip-existing  dist/*
+```
+
+```
+python setup.py sdist bdist_wheel
+```
+
+에러시 wheel 설치
+
+```
+pip install wheel
+```
