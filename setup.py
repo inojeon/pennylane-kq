@@ -10,6 +10,7 @@ pennylane_devices_list = [
     "kq.emulator.aws = pennylane_kq:KoreaQuantumEmulatorAWS",
     "kq.hardware = pennylane_kq:KoreaQuantumHardware",
     "kq.local_emulator = pennylane_kq:KoreaQuantumLocalEmulator",
+    "kq.remote_emulator = pennylane_kq:KoreaQuantumRemoteEmulator",
 ]
 
 # requirements = ["pennylane>=0.19,<0.30"]
