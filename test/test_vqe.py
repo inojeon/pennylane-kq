@@ -1,37 +1,58 @@
 import pennylane as qml
+from pennylane import numpy as np
 
-dev = qml.device(
-    "kq.remote_emulator",
-    wires=4,
-    shots=2048,
-)
+symbols = ["H", "H"]
+coordinates = np.array([0.0, 0.0, -0.6614, 0.0, 0.0, 0.6614])
 
+H, qubits = qml.qchem.molecular_hamiltonian(symbols, coordinates)
+print("Number of qubits = ", qubits)
+print("The Hamiltonian is ", H)
 
-# dev2 = qml.device(
-#     "default.qubit",
-#     wires=2,
-#     shots=2048,
-#     # accessKeyId=accessKeyId,
-#     # secretAccessKey=secretAccessKey,
-# )
+dev = qml.device("kq.local_emulator", wires=qubits)
 
+electrons = 2
+hf = qml.qchem.hf_state(electrons, qubits)
 
-# dev = qml.device("default.qubit", wires=4)
+print(hf)
 
 
-# @qml.qnode(dev)
-# def circuit(phi):
-#     qml.X(0)
-#     qml.X(1)
-#     qml.DoubleExcitation(phi, wires=[0, 1, 2, 3])
-#     return qml.state()
+def circuit(param, wires):
+    # qml.BasisState(hf, wires=wires)
+    qml.PauliX(wires=0)
+    qml.PauliX(wires=1)
+    qml.DoubleExcitation(param, wires=[0, 1, 2, 3])
 
 
-@qml.qnode(dev)
-def circuit(x):
-    qml.RX(x, wires=[0])
-    qml.CNOT(wires=[0, 1])
-    return qml.expval(qml.PauliZ(1))
+@qml.qnode(dev, interface="autograd")
+def cost_fn(param):
+    circuit(param, wires=range(qubits))
+    return qml.expval(H)
 
 
-print(circuit(0.1))
+opt = qml.GradientDescentOptimizer(stepsize=0.4)
+theta = np.array(0.0, requires_grad=True)
+
+# store the values of the cost function
+energy = [cost_fn(theta)]
+
+# store the values of the circuit parameter
+angle = [theta]
+
+max_iterations = 100
+conv_tol = 1e-06
+
+for n in range(max_iterations):
+    theta, prev_energy = opt.step_and_cost(cost_fn, theta)
+
+    energy.append(cost_fn(theta))
+    angle.append(theta)
+
+    conv = np.abs(energy[-1] - prev_energy)
+
+    print(f"Step = {n},  Energy = {energy[-1]:.8f} Ha")
+
+    if conv <= conv_tol:
+        break
+
+print("\n" f"Final value of the ground-state energy = {energy[-1]:.8f} Ha")
+print("\n" f"Optimal value of the circuit parameter = {angle[-1]:.4f}")

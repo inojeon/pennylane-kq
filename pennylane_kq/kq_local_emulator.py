@@ -19,8 +19,16 @@ class KoreaQuantumLocalEmulator(QubitDevice):
     version = "0.0.1"
     author = "Inho Jeon"
 
-    operations = {"PauliX", "RX", "CNOT", "RY", "RZ", "Hadamard"}
-    observables = {"PauliZ", "PauliX", "PauliY"}
+    operations = {"PauliX", "PauliY", "PauliZ", "RX", "CNOT", "RY", "RZ", "Hadamard"}
+    observables = {
+        "PauliX",
+        "PauliY",
+        "PauliZ",
+        "Identity",
+        "Hadamard",
+        "Hermitian",
+        "Projector",
+    }
 
     def __init__(self, wires=4, shots=1024):
         super().__init__(wires=wires, shots=shots)
@@ -28,6 +36,25 @@ class KoreaQuantumLocalEmulator(QubitDevice):
     def apply(self, operations, **kwargs):
         print("apply")
         # self.run(self._circuit)
+
+    def _job_submit_single(self, circuit):
+        # print(circuits[0].wires)
+        # print(circuits[0].to_openqasm(wires=sorted(circuits[0].wires)))
+        URL = "http://localhost:8000/job"
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "input_file": circuit.to_openqasm(wires=sorted(circuit.wires)),
+            "shot": self.shots,
+            "type": "qasm",
+        }
+        res = requests.post(URL, data=json.dumps(data), headers=headers)
+
+        if res.status_code == 201:
+            return res.json().get("jobUUID")
+        else:
+            raise DeviceError(
+                f"Job sumbit error. post /job/ req code : {res.status_code}"
+            )
 
     def _job_submit(self, circuits):
         # print(circuits[0].wires)
@@ -86,11 +113,14 @@ class KoreaQuantumLocalEmulator(QubitDevice):
         return result
 
     def batch_execute(self, circuits):
-        jobUUID = self._job_submit(circuits)
-        res_results = self._check_job_status(jobUUID)
+        res_results = []
+        for circuit in circuits:
+            jobUUID = self._job_submit_single(circuit)
+            res_result = self._check_job_status(jobUUID)
+            res_results.append(res_result["results"][0])
 
         results = []
-        for circuit, res_result in zip(circuits, res_results["results"]):
+        for circuit, res_result in zip(circuits, res_results):
             self._samples = self._convert_counts_to_samples(
                 res_result["data"]["counts"], circuit.num_wires
             )
