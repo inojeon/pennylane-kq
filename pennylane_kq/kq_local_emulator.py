@@ -35,34 +35,12 @@ class KoreaQuantumLocalEmulator(QubitDevice):
 
     def apply(self, operations, **kwargs):
         print("apply")
-        # self.run(self._circuit)
 
-    def _job_submit_single(self, circuit):
-        # print(circuits[0].wires)
-        # print(circuits[0].to_openqasm(wires=sorted(circuits[0].wires)))
+    def _job_submit(self, circuit):
         URL = "http://localhost:8000/job"
         headers = {"Content-Type": "application/json"}
         data = {
             "input_file": circuit.to_openqasm(wires=sorted(circuit.wires)),
-            "shot": self.shots,
-            "type": "qasm",
-        }
-        res = requests.post(URL, data=json.dumps(data), headers=headers)
-
-        if res.status_code == 201:
-            return res.json().get("jobUUID")
-        else:
-            raise DeviceError(
-                f"Job sumbit error. post /job/ req code : {res.status_code}"
-            )
-
-    def _job_submit(self, circuits):
-        # print(circuits[0].wires)
-        # print(circuits[0].to_openqasm(wires=sorted(circuits[0].wires)))
-        URL = "http://localhost:8000/job"
-        headers = {"Content-Type": "application/json"}
-        data = {
-            "input_file": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
             "shot": self.shots,
             "type": "qasm",
         }
@@ -115,7 +93,7 @@ class KoreaQuantumLocalEmulator(QubitDevice):
     def batch_execute(self, circuits):
         res_results = []
         for circuit in circuits:
-            jobUUID = self._job_submit_single(circuit)
+            jobUUID = self._job_submit(circuit)
             res_result = self._check_job_status(jobUUID)
             res_results.append(res_result["results"][0])
 

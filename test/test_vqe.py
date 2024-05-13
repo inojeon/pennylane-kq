@@ -8,7 +8,19 @@ H, qubits = qml.qchem.molecular_hamiltonian(symbols, coordinates)
 print("Number of qubits = ", qubits)
 print("The Hamiltonian is ", H)
 
-dev = qml.device("kq.local_emulator", wires=qubits)
+# dev = qml.device("kq.local_emulator", wires=qubits)
+
+
+accessKeyId = "DV7Z3NNQZET1O1QLIS31ZE32OOQTEIFE"
+secretAccessKey = "TEhIFzeZhXiR1bIO/DZ8+lyiA8VZp+qHEKc6fxaOIAM="
+
+dev = qml.device(
+    "kq.emulator",
+    wires=qubits,
+    shots=2048,
+    accessKeyId=accessKeyId,
+    secretAccessKey=secretAccessKey,
+)
 
 electrons = 2
 hf = qml.qchem.hf_state(electrons, qubits)
@@ -38,8 +50,10 @@ energy = [cost_fn(theta)]
 # store the values of the circuit parameter
 angle = [theta]
 
-max_iterations = 100
+max_iterations = 4
 conv_tol = 1e-06
+
+print("start for loop")
 
 for n in range(max_iterations):
     theta, prev_energy = opt.step_and_cost(cost_fn, theta)

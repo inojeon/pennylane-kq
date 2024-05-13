@@ -32,7 +32,7 @@ class KoreaQuantumEmulator(QubitDevice):
         self.run(self._circuit)
 
     def _get_token(self):
-        print("get KQ Cloud Token")
+        print("\r[info] get KQ Cloud Token", end="")
         api_url = f"http://150.183.154.20/oauth/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
@@ -50,8 +50,8 @@ class KoreaQuantumEmulator(QubitDevice):
                 f"/oauth/token error. req code : {requestData.status_code}"
             )
 
-    def _job_submit(self, circuits):
-        print("job submit")
+    def _job_submit(self, circuit):
+        print("\r[info] job submit", end="")
         URL = "http://150.183.154.20/v2/jobs"
         headers = {
             "Content-Type": "application/json",
@@ -59,7 +59,7 @@ class KoreaQuantumEmulator(QubitDevice):
         }
         data = {
             "resource": {"id": self.resourceId},
-            "code": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
+            "code": circuit.to_openqasm(wires=sorted(circuit.wires)),
             "shot": self.shots,
             "name": "test job",
             "type": "QASM",
@@ -74,15 +74,19 @@ class KoreaQuantumEmulator(QubitDevice):
     def _check_job_status(self, jobId):
         timeout = 6000
         timeout_start = time.time()
+        wait_string = ""
 
         while time.time() < timeout_start + timeout:
             URL = f"http://150.183.154.20/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
             res = requests.get(URL, headers=headers)
             status = res.json().get("status")
-            print(f"job status check: {status}")
+            wait_string = wait_string + "."
+            print(f"\r[info] job status : {status} {wait_string}", end="")
 
             if status == "COMPLETED":
+                print(f"\r", " " * 40, end="")
+                print(f"\r", end="")
                 return res.json().get("result")
             time.sleep(1)
         raise DeviceError("Job timeout")
@@ -115,11 +119,20 @@ class KoreaQuantumEmulator(QubitDevice):
         if not self.accessToken:
             self._get_token()
 
-        jobUUID = self._job_submit(circuits)
-        res_result = self._check_job_status(jobUUID)
+        res_results = []
+        for circuit in circuits:
+            jobUUID = self._job_submit(circuit)
+            res_result = self._check_job_status(jobUUID)
+            res_results.append(res_result)
 
         results = []
-        for circuit in circuits:
+
+        # jobUUID = self._job_submit(circuits)
+        # res_result = self._check_job_status(jobUUID)
+
+        results = []
+        for circuit, res_result in zip(circuits, res_results):
+            # for circuit in circuits:
             self._samples = self._convert_counts_to_samples(
                 res_result, circuit.num_wires
             )
