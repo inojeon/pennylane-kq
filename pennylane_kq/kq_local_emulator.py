@@ -30,14 +30,15 @@ class KoreaQuantumLocalEmulator(QubitDevice):
         "Projector",
     }
 
-    def __init__(self, wires=4, shots=1024):
+    def __init__(self, wires=4, shots=1024, host="http://localhost:8000"):
         super().__init__(wires=wires, shots=shots)
+        self.host = host
 
     def apply(self, operations, **kwargs):
         print("apply")
 
     def _job_submit(self, circuit):
-        URL = "http://localhost:8000/job"
+        URL = f"{self.host}/job"
         headers = {"Content-Type": "application/json"}
         data = {
             "input_file": circuit.to_openqasm(wires=sorted(circuit.wires)),
@@ -58,11 +59,11 @@ class KoreaQuantumLocalEmulator(QubitDevice):
         timeout_start = time.time()
 
         while time.time() < timeout_start + timeout:
-            URL = f"http://localhost:8000/job/{jobUUID}/status"
+            URL = f"{self.host}/job/{jobUUID}/status"
             res = requests.get(URL)
             time.sleep(1)
             if res.json().get("status") == "SUCCESS":
-                URL = f"http://localhost:8000/job/{jobUUID}/result"
+                URL = f"{self.host}/job/{jobUUID}/result"
                 res = requests.get(URL)
                 return res.json()
 

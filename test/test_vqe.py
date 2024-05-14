@@ -12,7 +12,7 @@ print("The Hamiltonian is ", H)
 
 
 accessKeyId = "DV7Z3NNQZET1O1QLIS31ZE32OOQTEIFE"
-secretAccessKey = "TEhIFzeZhXiR1bIO/DZ8+lyiA8VZp+qHEKc6fxaOIAM="
+secretAccessKey = "TEhIFzeZhXiccR1bIO/DZ8+lyiA8VZp+qHEKc6fxaOIAM="
 
 dev = qml.device(
     "kq.emulator",

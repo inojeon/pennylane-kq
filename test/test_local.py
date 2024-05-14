@@ -1,10 +1,6 @@
 import pennylane as qml
 
-dev = qml.device(
-    "kq.local_emulator",
-    wires=2,
-    shots=2048,
-)
+dev = qml.device("kq.local_emulator", wires=2, shots=2048, host="http://localhost:8000")
 
 
 dev2 = qml.device(
