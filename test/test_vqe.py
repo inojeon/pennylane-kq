@@ -9,10 +9,11 @@ print("Number of qubits = ", qubits)
 print("The Hamiltonian is ", H)
 
 # dev = qml.device("kq.local_emulator", wires=qubits)
+# dev = qml.device("default.qubit", wires=qubits)
 
 
 accessKeyId = "DV7Z3NNQZET1O1QLIS31ZE32OOQTEIFE"
-secretAccessKey = "TEhIFzeZhXiccR1bIO/DZ8+lyiA8VZp+qHEKc6fxaOIAM="
+secretAccessKey = "TEhIFzeZhXiR1bIO/DZ8+lyiA8VZp+qHEKc6fxaOIAM="
 
 dev = qml.device(
     "kq.emulator",

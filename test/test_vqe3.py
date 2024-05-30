@@ -1,7 +1,9 @@
 import pennylane as qml
 from pennylane import numpy as np
 
-dev = qml.device("default.qubit", wires=2)
+# dev = qml.device("default.qubit", wires=2)
+
+dev = qml.device("kq.local_emulator", wires=2, shots=5000)
 
 
 @qml.qnode(dev, interface="autograd")
@@ -58,6 +60,8 @@ theta = np.array(
     [0.5 * np.pi, 0.5 * np.pi, 0.5 * np.pi, 0.5 * np.pi], requires_grad=True
 )
 
+# print(circuit2(theta))
+
 # store the values of the cost function
 energy = [cost_fn(theta)]
 
@@ -75,8 +79,8 @@ for n in range(max_iterations):
 
     conv = np.abs(energy[-1] - prev_energy)
 
-    if n % 2 == 0:
-        print(f"Step = {n},  Energy = {energy[-1]:.8f}")
+    # if n % 2 == 0:
+    print(f"Step = {n},  Energy = {energy[-1]:.8f}")
 
     if conv <= conv_tol:
         break

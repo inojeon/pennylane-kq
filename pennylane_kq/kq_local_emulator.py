@@ -7,17 +7,16 @@ A device that allows us to implement operation on a single qudit. The backend is
 import requests, json, time
 from pennylane import DeviceError, QubitDevice
 
+from .kq_device import KoreaQuantumDevice
 
-class KoreaQuantumLocalEmulator(QubitDevice):
+
+class KoreaQuantumLocalEmulator(KoreaQuantumDevice):
     """
     The base class for all devices that call to an external server.
     """
 
     name = "Korea Quantum Local Emulator"
     short_name = "kq.local_emulator"
-    pennylane_requires = ">=0.16.0"
-    version = "0.0.1"
-    author = "Inho Jeon"
 
     operations = {"PauliX", "PauliY", "PauliZ", "RX", "CNOT", "RY", "RZ", "Hadamard"}
     observables = {
@@ -67,36 +66,51 @@ class KoreaQuantumLocalEmulator(QubitDevice):
                 res = requests.get(URL)
                 return res.json()
 
-    def _convert_counts_to_samples(self, count_datas, wires):
-        import numpy as np
+    def _jobs_submit(self, circuits):
+        URL = f"{self.host}/jobs"
+        headers = {"Content-Type": "application/json"}
+        jobs = [
+            {
+                "input_file": circuit.to_openqasm(wires=sorted(circuit.wires)),
+                "shot": self.shots,
+                "type": "qasm",
+            }
+            for circuit in circuits
+        ]
+        res = requests.post(URL, data=json.dumps({"jobs": jobs}), headers=headers)
 
-        first = True
-        result = None
+        if res.status_code == 201:
+            return res.json().get("collectionUUID")
+        else:
+            raise DeviceError(
+                f"Job sumbit error. post /jobs/ req code : {res.status_code}"
+            )
 
-        for hex_value, count in count_datas.items():
-            # 16진수 값을 10진수로 변환
-            decimal_value = int(hex_value, 16)
+    def _check_jobs_status(self, collectionUUID):
+        timeout = 6000
+        timeout_start = time.time()
 
-            if decimal_value >= 2**wires:
-                decimal_value = 2**wires - 1
-            # 10진수 값을 지정된 자릿수의 이진수 배열로 변환
-            binary_array = np.array([int(x) for x in f"{decimal_value:0{wires}b}"])
-            # 지정된 횟수만큼 배열을 반복하여 결과 리스트에 추가
-            expanded_array = np.tile(binary_array, (count, 1))
-            # 첫 번째 배열인 경우 result를 초기화
-            if first:
-                result = expanded_array
-                first = False
-            else:
-                result = np.vstack((result, expanded_array))
-        return result
+        # time.sleep(0.2)
+        while time.time() < timeout_start + timeout:
+            time.sleep(0.02)
+            URL = f"{self.host}/jobs/{collectionUUID}/status"
+            res = requests.get(URL)
+            if res.json().get("status") == "SUCCESS":
+                URL = f"{self.host}/jobs/{collectionUUID}/result"
+                res = requests.get(URL)
+                return res.json()
 
     def batch_execute(self, circuits):
-        res_results = []
-        for circuit in circuits:
-            jobUUID = self._job_submit(circuit)
-            res_result = self._check_job_status(jobUUID)
-            res_results.append(res_result["results"][0])
+        # res_results = []
+        # for circuit in circuits:
+        #     jobUUID = self._job_submit(circuit)
+        #     res_result = self._check_job_status(jobUUID)
+        #     res_results.append(res_result["results"][0])
+
+        collectionUUID = self._jobs_submit(circuits)
+        tmp_results = self._check_jobs_status(collectionUUID)
+
+        res_results = [res_result["results"][0] for res_result in tmp_results]
 
         results = []
         for circuit, res_result in zip(circuits, res_results):
