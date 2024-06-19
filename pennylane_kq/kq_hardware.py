@@ -18,22 +18,24 @@ class KoreaQuantumHardware(QubitDevice):
     author = "Inho Jeon"
     accessToken = None
     resourceId = "18208724-e51f-4bab-b635-298ea07070b2"
+    cloud_url = "http://150.183.154.20"
 
-    operations = {"PauliX", "RX", "CNOT", "RY", "RZ"}
-    observables = {"PauliZ", "PauliX", "PauliY"}
-
-    def __init__(self, wires=4, shots=1024, accessKeyId=None, secretAccessKey=None):
+    def __init__(
+        self, wires=4, shots=1024, pollingTime=1, accessKeyId=None, secretAccessKey=None
+    ):
         super().__init__(wires=wires, shots=shots)
         self.accessKeyId = accessKeyId
         self.secretAccessKey = secretAccessKey
-        # self.hardware_options = hardware_options or "kqHardware"
+        self.pollingTime = pollingTime
+        # self.hardware_options = hardware_options or "kqEmulator"
 
     def apply(self, operations, **kwargs):
         self.run(self._circuit)
 
     def _get_token(self):
-        print("get KQ Cloud Token")
-        api_url = f"http://150.183.154.20:31001/oauth/token"
+        print("\r[info] get KQ Cloud Token", end="")
+        # api_url = f"{self.cloud_url}/oauth/token"
+        api_url = f"http://150.183.154.20/oauth/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
             "grant_type": "apikey",
@@ -50,16 +52,16 @@ class KoreaQuantumHardware(QubitDevice):
                 f"/oauth/token error. req code : {requestData.status_code}"
             )
 
-    def _job_submit(self, circuits):
-        print("job submit")
-        URL = "http://150.183.154.20:31001/v2/jobs"
+    def _job_submit(self, circuit):
+        print("\r[info] job submit", end="")
+        URL = f"{self.cloud_url}/v2/jobs"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.accessToken}",
         }
         data = {
             "resource": {"id": self.resourceId},
-            "input_file": circuits[0].to_openqasm(wires=sorted(circuits[0].wires)),
+            "code": circuit.to_openqasm(wires=sorted(circuit.wires)),
             "shot": self.shots,
             "name": "test job",
             "type": "QASM",
@@ -74,27 +76,43 @@ class KoreaQuantumHardware(QubitDevice):
     def _check_job_status(self, jobId):
         timeout = 6000
         timeout_start = time.time()
+        wait_string = ""
 
         while time.time() < timeout_start + timeout:
-            URL = f"http://150.183.154.20:31001/v2/jobs/{jobId}"
+            time.sleep(self.pollingTime)
+            URL = f"{self.cloud_url}/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
             res = requests.get(URL, headers=headers)
             status = res.json().get("status")
-            print(f"job status check: {status}")
+            wait_string = wait_string + "."
+            print(f"\r[info] job status : {status} {wait_string}", end="")
 
             if status == "COMPLETED":
+                print(f"\r", " " * 40, end="")
+                print(f"\r", end="")
                 return res.json().get("result")
-            time.sleep(1)
         raise DeviceError("Job timeout")
 
-    def batch_execute(
-        self, circuits
-    ):  # pragma: no cover, pylint:disable=arguments-differ
-        # print(self.accessKeyId, self.secretAccessKey)
+    def batch_execute(self, circuits):
         if not self.accessToken:
             self._get_token()
 
-        jobId = self._job_submit(circuits)
-        result = self._check_job_status(jobId)
-        # print(jobId)
-        return [result]
+        res_results = []
+        for circuit in circuits:
+            jobUUID = self._job_submit(circuit)
+            res_result = self._check_job_status(jobUUID)
+            res_results.append(res_result)
+
+        results = []
+        for circuit, res_result in zip(circuits, res_results):
+            # for circuit in circuits:
+            self._samples = self._convert_counts_to_samples(
+                res_result, circuit.num_wires
+            )
+
+            res = self.statistics(circuit)
+            single_measurement = len(circuit.measurements) == 1
+            res = res[0] if single_measurement else tuple(res)
+            results.append(res)
+
+        return results
