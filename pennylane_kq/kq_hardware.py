@@ -20,7 +20,7 @@ class KoreaQuantumHardware(KoreaQuantumDevice):
     author = "Inho Jeon"
     accessToken = None
     resourceId = "18208724-e51f-4bab-b635-298ea07070b2"
-    cloud_url = "http://150.183.154.20"
+    cloud_url = "https://qc.kisti.re.kr"
     operations = {"PauliX", "PauliY", "PauliZ", "RX", "CNOT", "RY", "RZ"}
 
     def __init__(
@@ -37,8 +37,7 @@ class KoreaQuantumHardware(KoreaQuantumDevice):
 
     def _get_token(self):
         print("\r[info] get KQ Cloud Token", end="")
-        # api_url = f"{self.cloud_url}/oauth/token"
-        api_url = f"http://150.183.154.20/oauth/token"
+        api_url = f"{self.cloud_url}/oauth/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
             "grant_type": "apikey",

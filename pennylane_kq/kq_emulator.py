@@ -94,7 +94,7 @@ class KoreaQuantumEmulator(KoreaQuantumDevice):
     accessToken = None
     secretAccessKey = None
     resourceId = "f8284e6e-d97e-4afc-a015-39d382273a99"
-    cloud_url = "http://150.183.154.20"
+    cloud_url = "https://qc.kisti.re.kr"
 
     operations = allowed_operations
     observables = allowed_observables
@@ -113,8 +113,7 @@ class KoreaQuantumEmulator(KoreaQuantumDevice):
 
     def _get_token(self):
         print("\r[info] get KQ Cloud Token", end="")
-        # api_url = f"{self.cloud_url}/oauth/token"
-        api_url = f"http://150.183.154.20/oauth/token"
+        api_url = f"{self.cloud_url}/oauth/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
             "grant_type": "apikey",
