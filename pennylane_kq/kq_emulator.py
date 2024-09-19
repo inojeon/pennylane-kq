@@ -7,6 +7,82 @@ from pennylane import DeviceError
 
 from .kq_device import KoreaQuantumDevice
 
+allowed_operations = {
+    "Identity",
+    "BasisState",
+    "QubitStateVector",
+    "StatePrep",
+    "QubitUnitary",
+    "ControlledQubitUnitary",
+    "MultiControlledX",
+    "DiagonalQubitUnitary",
+    "PauliX",
+    "PauliY",
+    "PauliZ",
+    "MultiRZ",
+    "Hadamard",
+    "S",
+    "Adjoint(S)",
+    "T",
+    "Adjoint(T)",
+    "SX",
+    "Adjoint(SX)",
+    "CNOT",
+    "SWAP",
+    "ISWAP",
+    "PSWAP",
+    "Adjoint(ISWAP)",
+    "SISWAP",
+    "Adjoint(SISWAP)",
+    "SQISW",
+    "CSWAP",
+    "Toffoli",
+    "CY",
+    "CZ",
+    "PhaseShift",
+    "ControlledPhaseShift",
+    "CPhase",
+    "RX",
+    "RY",
+    "RZ",
+    "Rot",
+    "CRX",
+    "CRY",
+    "CRZ",
+    "CRot",
+    "IsingXX",
+    "IsingYY",
+    "IsingZZ",
+    "IsingXY",
+    "SingleExcitation",
+    "SingleExcitationPlus",
+    "SingleExcitationMinus",
+    "DoubleExcitation",
+    "DoubleExcitationPlus",
+    "DoubleExcitationMinus",
+    "QubitCarry",
+    "QubitSum",
+    "OrbitalRotation",
+    "QFT",
+    "ECR",
+}
+
+allowed_observables = {
+    "PauliX",
+    "PauliY",
+    "PauliZ",
+    "Hadamard",
+    "Hermitian",
+    "Identity",
+    "Projector",
+    "SparseHamiltonian",
+    "Hamiltonian",
+    "Sum",
+    "SProd",
+    "Prod",
+    "Exp",
+}
+
 
 class KoreaQuantumEmulator(KoreaQuantumDevice):
     """
@@ -19,6 +95,9 @@ class KoreaQuantumEmulator(KoreaQuantumDevice):
     secretAccessKey = None
     resourceId = "f8284e6e-d97e-4afc-a015-39d382273a99"
     cloud_url = "http://150.183.154.20"
+
+    operations = allowed_operations
+    observables = allowed_observables
 
     def __init__(
         self, wires=4, shots=1024, pollingTime=1, accessKeyId=None, secretAccessKey=None
@@ -76,16 +155,21 @@ class KoreaQuantumEmulator(KoreaQuantumDevice):
     def _check_job_status(self, jobId):
         timeout = 6000
         timeout_start = time.time()
-        wait_string = ""
+        # wait_string = ""
 
+        iter = 0
         while time.time() < timeout_start + timeout:
+            iter = iter + 1
+
             time.sleep(self.pollingTime)
             URL = f"{self.cloud_url}/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
             res = requests.get(URL, headers=headers)
             status = res.json().get("status")
-            wait_string = wait_string + "."
-            print(f"\r[info] job status : {status} {wait_string}", end="")
+            # wait_string = wait_string + "."
+
+            loading = ["*", "|", "/", "-", "\\", "|", "/", "-", "\\"]
+            print(f"\r[info] job status : {status} {loading[iter % 9]}", end="")
 
             if status == "COMPLETED":
                 print(f"\r", " " * 40, end="")

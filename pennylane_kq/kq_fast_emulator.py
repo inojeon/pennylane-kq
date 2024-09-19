@@ -86,20 +86,31 @@ allowed_observables = {
 }
 
 
-class KoreaQuantumLocalEmulator(KoreaQuantumDevice):
+class KoreaQuantumFastEmulator(KoreaQuantumDevice):
     """
     The base class for all devices that call to an external server.
     """
 
-    name = "Korea Quantum Local Emulator"
-    short_name = "kq.local_emulator"
+    name = "Korea Quantum Fast Emulator"
+    short_name = "kq.emulator.fast"
 
     operations = allowed_operations
     observables = allowed_observables
+    operations = allowed_operations
+    observables = allowed_observables
 
-    def __init__(self, wires=4, shots=1024, host="http://localhost:8000"):
+    def __init__(
+        self,
+        wires=4,
+        shots=1024,
+        host="http://150.183.154.21:8002",
+        accessKeyId=None,
+        secretAccessKey=None,
+    ):
         super().__init__(wires=wires, shots=shots)
         self.host = host
+        self.accessKeyId = accessKeyId
+        self.secretAccessKey = secretAccessKey
 
     def apply(self, operations, **kwargs):
         print("apply")

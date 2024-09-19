@@ -3,25 +3,101 @@ A device that allows us to implement operation on a single qudit. The backend is
 """
 
 import requests, json, time
-from pennylane import DeviceError, QubitDevice
+from pennylane import DeviceError
 
 from .kq_device import KoreaQuantumDevice
 
 
-class KoreaQuantumHardware(KoreaQuantumDevice):
+allowed_operations = {
+    "Identity",
+    "BasisState",
+    "QubitStateVector",
+    "StatePrep",
+    "QubitUnitary",
+    "ControlledQubitUnitary",
+    "MultiControlledX",
+    "DiagonalQubitUnitary",
+    "PauliX",
+    "PauliY",
+    "PauliZ",
+    "MultiRZ",
+    "Hadamard",
+    "S",
+    "Adjoint(S)",
+    "T",
+    "Adjoint(T)",
+    "SX",
+    "Adjoint(SX)",
+    "CNOT",
+    "SWAP",
+    "ISWAP",
+    "PSWAP",
+    "Adjoint(ISWAP)",
+    "SISWAP",
+    "Adjoint(SISWAP)",
+    "SQISW",
+    "CSWAP",
+    "Toffoli",
+    "CY",
+    "CZ",
+    "PhaseShift",
+    "ControlledPhaseShift",
+    "CPhase",
+    "RX",
+    "RY",
+    "RZ",
+    "Rot",
+    "CRX",
+    "CRY",
+    "CRZ",
+    "CRot",
+    "IsingXX",
+    "IsingYY",
+    "IsingZZ",
+    "IsingXY",
+    "SingleExcitation",
+    "SingleExcitationPlus",
+    "SingleExcitationMinus",
+    "DoubleExcitation",
+    "DoubleExcitationPlus",
+    "DoubleExcitationMinus",
+    "QubitCarry",
+    "QubitSum",
+    "OrbitalRotation",
+    "QFT",
+    "ECR",
+}
+
+allowed_observables = {
+    "PauliX",
+    "PauliY",
+    "PauliZ",
+    "Hadamard",
+    "Hermitian",
+    "Identity",
+    "Projector",
+    "SparseHamiltonian",
+    "Hamiltonian",
+    "Sum",
+    "SProd",
+    "Prod",
+    "Exp",
+}
+
+
+class KoreaQuantumMPIEmulator(KoreaQuantumDevice):
     """
     The base class for all devices that call to an external server.
     """
 
-    name = "Korea Quantum Hardware"
-    short_name = "kq.hardware"
-    pennylane_requires = ">=0.16.0"
-    version = "0.0.1"
-    author = "Inho Jeon"
+    name = "Korea Quantum Emulator MPI Ver"
+    short_name = "kq.emulator.mpi"
     accessToken = None
-    resourceId = "18208724-e51f-4bab-b635-298ea07070b2"
+    secretAccessKey = None
+    resourceId = "e8888562-4116-47f3-a4d6-e1079403564f"
     cloud_url = "http://150.183.154.20"
-    operations = {"PauliX", "PauliY", "PauliZ", "RX", "CNOT", "RY", "RZ"}
+    operations = allowed_operations
+    observables = allowed_observables
 
     def __init__(
         self, wires=4, shots=1024, pollingTime=1, accessKeyId=None, secretAccessKey=None
@@ -84,13 +160,13 @@ class KoreaQuantumHardware(KoreaQuantumDevice):
         iter = 0
         while time.time() < timeout_start + timeout:
             iter = iter + 1
+
             time.sleep(self.pollingTime)
             URL = f"{self.cloud_url}/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
             res = requests.get(URL, headers=headers)
             status = res.json().get("status")
             # wait_string = wait_string + "."
-            # print(f"\r[info] job status : {status} {wait_string}", end="")
 
             loading = ["*", "|", "/", "-", "\\", "|", "/", "-", "\\"]
             print(f"\r[info] job status : {status} {loading[iter % 9]}", end="")

@@ -1,17 +1,6 @@
 import pennylane as qml
 import numpy as np
 
-dev = qml.device("default.qubit", wires=5, shots=2048)
-
-
-@qml.qnode(dev)
-def circuit1(x):
-    qml.Hadamard(wires=0)
-    qml.CNOT(wires=[0, 1])
-    qml.RY(x, wires=0)
-    return qml.expval(qml.PauliZ(0) @ qml.PauliZ(1))
-
-
 # dev2 = qml.device(
 #     "kq.local_emulator", wires=5, shots=2048, host="http://localhost:8000"
 # )
@@ -20,8 +9,8 @@ accessKeyId = "DV7Z3NNQZET1O1QLIS31ZE32OOQTEIFE"
 secretAccessKey = "TEhIFzeZhXiR1bIO/DZ8+lyiA8VZp+qHEKc6fxaOIAM="
 
 dev2 = qml.device(
-    "kq.emulator",
-    wires=5,
+    "kq.emulator.fast",
+    wires=2,
     shots=2048,
     accessKeyId=accessKeyId,
     secretAccessKey=secretAccessKey,
@@ -30,14 +19,13 @@ dev2 = qml.device(
 
 @qml.qnode(dev2)
 def circuit1(x):
-    qml.Hadamard(wires=0)
     qml.CNOT(wires=[0, 1])
     qml.RY(x, wires=0)
     return qml.state()
     # return qml.expval(qml.PauliZ(0) @ qml.PauliZ(1))
 
 
-print(circuit1(0.5))
+print(circuit1(np.pi / 2))
 
 # @qml.qnode(dev2)
 # def circuit11(x):
