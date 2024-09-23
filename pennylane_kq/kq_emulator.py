@@ -2,10 +2,15 @@
 A device that allows us to implement operation on a single qudit. The backend is a remote simulator.
 """
 
-import requests, json, time
+import requests, json, time, certifi
 from pennylane import DeviceError
 
 from .kq_device import KoreaQuantumDevice
+import warnings
+
+# 모든 경고를 무시하는 코드
+warnings.filterwarnings("ignore")
+
 
 allowed_operations = {
     "Identity",
@@ -95,6 +100,7 @@ class KoreaQuantumEmulator(KoreaQuantumDevice):
     secretAccessKey = None
     resourceId = "f8284e6e-d97e-4afc-a015-39d382273a99"
     cloud_url = "https://qc.kisti.re.kr"
+    # cloud_url = "http://150.183.158.80"
 
     operations = allowed_operations
     observables = allowed_observables
@@ -120,7 +126,7 @@ class KoreaQuantumEmulator(KoreaQuantumDevice):
             "accessKeyId": self.accessKeyId,
             "secretAccessKey": self.secretAccessKey,
         }
-        requestData = requests.post(api_url, data=data, headers=headers)
+        requestData = requests.post(api_url, data=data, headers=headers, verify=False)
         if requestData.status_code == 200:
             jsondata = requestData.json()
             self.accessToken = jsondata.get("accessToken")
@@ -144,7 +150,7 @@ class KoreaQuantumEmulator(KoreaQuantumDevice):
             "name": "test job",
             "type": "QASM",
         }
-        res = requests.post(URL, data=json.dumps(data), headers=headers)
+        res = requests.post(URL, data=json.dumps(data), headers=headers, verify=False)
 
         if res.status_code == 201:
             return res.json().get("id")
@@ -163,14 +169,14 @@ class KoreaQuantumEmulator(KoreaQuantumDevice):
             time.sleep(self.pollingTime)
             URL = f"{self.cloud_url}/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
-            res = requests.get(URL, headers=headers)
+            res = requests.get(URL, headers=headers, verify=False)
             status = res.json().get("status")
             # wait_string = wait_string + "."
 
             loading = ["*", "|", "/", "-", "\\", "|", "/", "-", "\\"]
             print(f"\r[info] job status : {status} {loading[iter % 9]}", end="")
 
-            if status == "COMPLETED":
+            if status == "SUCCESS":
                 print(f"\r", " " * 40, end="")
                 print(f"\r", end="")
                 return res.json().get("result")
