@@ -2,7 +2,7 @@
 A device that allows us to implement operation on a single qudit. The backend is a remote simulator.
 """
 
-import requests, json, time, certifi
+import requests, json, time
 from pennylane import DeviceError
 
 from .kq_device import KoreaQuantumDevice

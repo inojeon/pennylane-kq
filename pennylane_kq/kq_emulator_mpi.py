@@ -6,6 +6,10 @@ import requests, json, time
 from pennylane import DeviceError
 
 from .kq_device import KoreaQuantumDevice
+import warnings
+
+# 모든 경고를 무시하는 코드
+warnings.filterwarnings("ignore")
 
 
 allowed_operations = {
@@ -120,7 +124,7 @@ class KoreaQuantumMPIEmulator(KoreaQuantumDevice):
             "accessKeyId": self.accessKeyId,
             "secretAccessKey": self.secretAccessKey,
         }
-        requestData = requests.post(api_url, data=data, headers=headers)
+        requestData = requests.post(api_url, data=data, headers=headers, verify=False)
         if requestData.status_code == 200:
             jsondata = requestData.json()
             self.accessToken = jsondata.get("accessToken")
@@ -144,7 +148,7 @@ class KoreaQuantumMPIEmulator(KoreaQuantumDevice):
             "name": "test job",
             "type": "QASM",
         }
-        res = requests.post(URL, data=json.dumps(data), headers=headers)
+        res = requests.post(URL, data=json.dumps(data), headers=headers, verify=False)
 
         if res.status_code == 201:
             return res.json().get("id")
@@ -163,7 +167,7 @@ class KoreaQuantumMPIEmulator(KoreaQuantumDevice):
             time.sleep(self.pollingTime)
             URL = f"{self.cloud_url}/v2/jobs/{jobId}"
             headers = {"Authorization": f"Bearer {self.accessToken}"}
-            res = requests.get(URL, headers=headers)
+            res = requests.get(URL, headers=headers, verify=False)
             status = res.json().get("status")
             # wait_string = wait_string + "."
 
