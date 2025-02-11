@@ -35,6 +35,15 @@ KISTI
 If you are having issues, please let us know by posting the issue on our Github issue tracker, or
 by asking a question in the forum.
 
+## 개발환경
+
+Editable 모드(-e)로 패키지 설치, 설치된 패키지가 로컬 소스 코드를 참조
+
+```
+pip install -e .  
+```
+이후 디버깅 모드로 코드 실행 하면됨
+
 ## pypi 업데이트 방법
 
 \_version.py 에서 버전 변경,
