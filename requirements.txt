@@ -1,4 +1,4 @@
-pennylane>=0.20.0
+pennylane>=0.40.0
 pytest>=6.2.4
 pylint>=2.12.2
 black>=21.12b0

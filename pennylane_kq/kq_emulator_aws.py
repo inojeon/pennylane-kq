@@ -3,7 +3,8 @@ A device that allows us to implement operation on a single qudit. The backend is
 """
 
 import requests, json, time
-from pennylane import DeviceError, QubitDevice
+from pennylane import DeviceError
+from pennylane.devices import QubitDevice
 
 
 class KoreaQuantumEmulatorAWS(QubitDevice):

@@ -134,3 +134,6 @@ dmypy.json
 # test*.py
 
 .vscode
+
+# Pycharm
+.idea

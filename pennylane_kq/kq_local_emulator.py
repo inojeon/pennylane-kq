@@ -5,7 +5,7 @@ A device that allows us to implement operation on a single qudit. The backend is
 # import numpy as np
 
 import requests, json, time
-from pennylane import DeviceError, QubitDevice
+from pennylane import DeviceError
 
 from .kq_device import KoreaQuantumDevice
 
