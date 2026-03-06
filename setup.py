@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 with open("pennylane_kq/_version.py") as f:
@@ -21,7 +21,7 @@ setup(
     author="Inho Jeon",
     author_email="inojeon@kisti.re.kr",
     license="BSD-2",
-    packages=["pennylane_kq"],
+    packages=find_packages(),
     zip_safe=False,
     # install_requires=requirements,
     entry_points={
