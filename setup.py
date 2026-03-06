@@ -6,13 +6,7 @@ with open("pennylane_kq/_version.py") as f:
 
 
 pennylane_devices_list = [
-    "kq.emulator = pennylane_kq:KoreaQuantumEmulator",
-    "kq.emulator.mpi = pennylane_kq:KoreaQuantumMPIEmulator",
-    "kq.emulator.fast = pennylane_kq:KoreaQuantumFastEmulator",
-    "kq.hardware = pennylane_kq:KoreaQuantumHardware",
-    "kq.local_emulator = pennylane_kq:KoreaQuantumLocalEmulator",
-    "kq.remote_emulator = pennylane_kq:KoreaQuantumRemoteEmulator",
-    "kq.emulator.aws = pennylane_kq:KoreaQuantumEmulatorAWS",
+    "kq.cloudv2 = pennylane_kq:KQCloudV2Device",
 ]
 
 # requirements = ["pennylane>=0.19,<0.30"]
@@ -33,9 +27,11 @@ setup(
     entry_points={
         "pennylane.plugins": pennylane_devices_list
     },  # for registering the pennylane device(s)
+    include_package_data=True,
     install_requires=[
-        "pennylane >= 0.31",
+        "pennylane >= 0.40",
         "numpy",
+        "requests >= 2.26.0",
     ],
     provides=["pennylane_kq"],
 )

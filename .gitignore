@@ -137,3 +137,6 @@ dmypy.json
 
 # Pycharm
 .idea
+
+CLAUDE.md
+docs/
