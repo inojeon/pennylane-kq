@@ -20,6 +20,10 @@ PennyLane plugin for KISTI Quantum Cloud API v2.
 ```bash
 pip install git+https://github.com/inojeon/pennylane-kq.git
 ```
+or
+```bash
+pip install https://github.com/inojeon/pennylane-kq/releases/download/v0.0.29/pennylane_kq-0.0.29-py3-none-any.whl
+```
 
 ### From PyPI (Coming Soon)
 
