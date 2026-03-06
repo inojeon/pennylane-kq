@@ -47,7 +47,7 @@ class KQCloudV2Device(Device):
         target (str): QCC-TARGET device code. Required.
         stream_timeout (float): SSE stream timeout in seconds. Default: 1800.0 (30 minutes)
         max_retries (int): Maximum number of retries for failed requests. Default: 3
-        use_streaming (bool): Use SSE streaming (True) or HTTP polling (False). Default: True
+        use_streaming (bool): Use SSE streaming (True) or HTTP polling (False). Default: False
         poll_interval (float): Polling interval in seconds when use_streaming=False. Default: 2.0
 
     Example:
@@ -107,7 +107,7 @@ class KQCloudV2Device(Device):
         target: Optional[str] = None,
         stream_timeout: float = 1800.0,
         max_retries: int = 3,
-        use_streaming: bool = True,
+        use_streaming: bool = False,
         poll_interval: float = 2.0,
     ):
         """
