@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def request_with_retry(
     request_func: Callable,
     max_retries: int = 3,
-    retry_on_status: Optional[List[int]] = None
+    retry_on_status: Optional[List[int]] = None,
 ):
     """
     Execute HTTP request with exponential backoff retry logic.
@@ -45,10 +45,10 @@ def request_with_retry(
             response = request_func()
 
             # Check if status code should trigger retry
-            if hasattr(response, 'status_code'):
+            if hasattr(response, "status_code"):
                 if response.status_code in retry_on_status:
                     if attempt < max_retries:
-                        wait_time = (2 ** attempt) + random.uniform(0, 1)
+                        wait_time = (2**attempt) + random.uniform(0, 1)
                         logger.warning(
                             f"Request failed with status {response.status_code}. "
                             f"Retrying in {wait_time:.2f}s (attempt {attempt + 1}/{max_retries})"
@@ -68,7 +68,7 @@ def request_with_retry(
             last_exception = e
 
             if attempt < max_retries:
-                wait_time = (2 ** attempt) + random.uniform(0, 1)
+                wait_time = (2**attempt) + random.uniform(0, 1)
                 logger.warning(
                     f"Request failed: {type(e).__name__}: {e}. "
                     f"Retrying in {wait_time:.2f}s (attempt {attempt + 1}/{max_retries})"
@@ -93,7 +93,8 @@ def submit_batch(
     jobs_data: Dict[str, Any],
     api_key: str,
     target: str,
-    max_retries: int = 3
+    max_retries: int = 3,
+    verify_ssl: bool = True,
 ) -> Tuple[str, List[str]]:
     """
     Submit batch of jobs to KRISS API with automatic retry.
@@ -104,6 +105,7 @@ def submit_batch(
         api_key: QCC-API-KEY header value
         target: QCC-TARGET header value
         max_retries: Maximum number of retries (default: 3)
+        verify_ssl: Whether to verify SSL certificates (default: True)
 
     Returns:
         Tuple of (batch_uuid, list of job_uuids)
@@ -120,17 +122,16 @@ def submit_batch(
 
     def submit_request():
         return requests.post(
-            url,
-            json=jobs_data,
-            headers=headers,
-            timeout=30.0
+            url, json=jobs_data, headers=headers, timeout=30.0, verify=verify_ssl
         )
 
     try:
         response = request_with_retry(submit_request, max_retries=max_retries)
 
         if response.status_code != 200:
-            error_msg = f"Batch submission failed: {response.status_code} {response.text}"
+            error_msg = (
+                f"Batch submission failed: {response.status_code} {response.text}"
+            )
             logger.error(error_msg)
             raise RuntimeError(error_msg)
 
@@ -147,9 +148,7 @@ def submit_batch(
 
 
 def stream_batch_results(
-    host: str,
-    batch_uuid: str,
-    stream_timeout: float = 1800.0
+    host: str, batch_uuid: str, stream_timeout: float = 1800.0, verify_ssl: bool = True
 ) -> List[Dict[str, Any]]:
     """
     Stream batch results via SSE.
@@ -158,6 +157,7 @@ def stream_batch_results(
         host: Cloud API v2 host URL (e.g., "http://localhost:8080")
         batch_uuid: Batch UUID
         stream_timeout: SSE timeout in seconds (default: 1800.0)
+        verify_ssl: Whether to verify SSL certificates (default: True)
 
     Returns:
         List of job results
@@ -172,10 +172,7 @@ def stream_batch_results(
 
     try:
         response = requests.get(
-            url,
-            stream=True,
-            headers=headers,
-            timeout=stream_timeout
+            url, stream=True, headers=headers, timeout=stream_timeout, verify=verify_ssl
         )
 
         if response.status_code != 200:
@@ -267,7 +264,8 @@ def poll_batch_results(
     target: str,
     poll_interval: float = 2.0,
     max_wait: float = 1800.0,
-    max_retries: int = 3
+    max_retries: int = 3,
+    verify_ssl: bool = True,
 ) -> List[Dict[str, Any]]:
     """
     Poll batch results via HTTP GET (two-phase: status check then results fetch).
@@ -283,6 +281,7 @@ def poll_batch_results(
         poll_interval: Time between polls in seconds (default: 2.0)
         max_wait: Maximum wait time in seconds (default: 1800.0)
         max_retries: Maximum retries per request (default: 3)
+        verify_ssl: Whether to verify SSL certificates (default: True)
 
     Returns:
         List of job results sorted by sequence_number
@@ -308,13 +307,25 @@ def poll_batch_results(
             raise RuntimeError(f"Polling timeout after {max_wait}s")
 
         try:
+
             def status_request():
-                return requests.get(status_url, headers=headers, timeout=30.0)
+                return requests.get(
+                    status_url, headers=headers, timeout=30.0, verify=verify_ssl
+                )
 
             response = request_with_retry(status_request, max_retries=max_retries)
 
+            if response.status_code == 404:
+                logger.debug(
+                    f"Batch not yet available (404), retrying in {poll_interval}s"
+                )
+                time.sleep(poll_interval)
+                continue
+
             if response.status_code != 200:
-                error_msg = f"Batch status query failed: {response.status_code} {response.text}"
+                error_msg = (
+                    f"Batch status query failed: {response.status_code} {response.text}"
+                )
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
 
@@ -346,8 +357,11 @@ def poll_batch_results(
 
     # Phase 2: Fetch results
     try:
+
         def results_request():
-            return requests.get(results_url, headers=headers, timeout=30.0)
+            return requests.get(
+                results_url, headers=headers, timeout=30.0, verify=verify_ssl
+            )
 
         response = request_with_retry(results_request, max_retries=max_retries)
 

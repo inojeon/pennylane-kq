@@ -49,6 +49,7 @@ class KQCloudV2Device(Device):
         max_retries (int): Maximum number of retries for failed requests. Default: 3
         use_streaming (bool): Use SSE streaming (True) or HTTP polling (False). Default: False
         poll_interval (float): Polling interval in seconds when use_streaming=False. Default: 2.0
+        verify_ssl (bool): Whether to verify SSL certificates. Default: True
 
     Example:
         >>> import pennylane as qml
@@ -74,27 +75,51 @@ class KQCloudV2Device(Device):
         "Snapshot",
         "Barrier",
         # Single-qubit gates
-        "PauliX", "PauliY", "PauliZ",
-        "Hadamard", "S", "T", "SX",
-        "RX", "RY", "RZ",
-        "PhaseShift", "U1", "U2", "U3",
+        "PauliX",
+        "PauliY",
+        "PauliZ",
+        "Hadamard",
+        "S",
+        "T",
+        "SX",
+        "RX",
+        "RY",
+        "RZ",
+        "PhaseShift",
+        "U1",
+        "U2",
+        "U3",
         # Two-qubit gates
-        "CNOT", "CZ", "CY", "SWAP",
-        "ISWAP", "ECR", "SISWAP",
-        "CRX", "CRY", "CRZ",
+        "CNOT",
+        "CZ",
+        "CY",
+        "SWAP",
+        "ISWAP",
+        "ECR",
+        "SISWAP",
+        "CRX",
+        "CRY",
+        "CRZ",
         "ControlledPhaseShift",
         # Three-qubit gates
-        "CSWAP", "Toffoli",
+        "CSWAP",
+        "Toffoli",
         # Multi-qubit gates
         "MultiControlledX",
     }
 
     # Supported observables (measurements)
     observables = {
-        "PauliX", "PauliY", "PauliZ",
-        "Hadamard", "Identity",
-        "Hermitian", "Projector",
-        "Prod", "Sum", "SProd",  # Arithmetic observables
+        "PauliX",
+        "PauliY",
+        "PauliZ",
+        "Hadamard",
+        "Identity",
+        "Hermitian",
+        "Projector",
+        "Prod",
+        "Sum",
+        "SProd",  # Arithmetic observables
         "Hamiltonian",
     }
 
@@ -109,6 +134,7 @@ class KQCloudV2Device(Device):
         max_retries: int = 3,
         use_streaming: bool = False,
         poll_interval: float = 2.0,
+        verify_ssl: bool = True,
     ):
         """
         Initialize KQ Cloud API v2 device.
@@ -123,31 +149,36 @@ class KQCloudV2Device(Device):
             max_retries: Maximum number of retries for failed requests
             use_streaming: Use SSE streaming (True) or polling (False)
             poll_interval: Polling interval in seconds (used when use_streaming=False)
+            verify_ssl: Whether to verify SSL certificates
         """
         if not api_key:
             raise ValueError("api_key is required")
         if not target:
             raise ValueError("target is required")
         if shots is None:
-            raise ValueError("shots is required (KRISS API does not support statevector mode)")
+            raise ValueError(
+                "shots is required (KRISS API does not support statevector mode)"
+            )
 
         super().__init__(wires=wires, shots=shots)
 
-        self.host = host.rstrip('/')
+        self.host = host.rstrip("/")
         self.api_key = api_key
         self.target = target
         self.stream_timeout = stream_timeout
         self.max_retries = max_retries
         self.use_streaming = use_streaming
         self.poll_interval = poll_interval
+        self.verify_ssl = verify_ssl
 
-        logger.info(f"Initialized KQCloudV2Device: host={self.host}, "
-                   f"wires={len(self.wires)}, shots={self.shots}, "
-                   f"target={self.target}, use_streaming={self.use_streaming}")
+        logger.info(
+            f"Initialized KQCloudV2Device: host={self.host}, "
+            f"wires={len(self.wires)}, shots={self.shots}, "
+            f"target={self.target}, use_streaming={self.use_streaming}"
+        )
 
     def preprocess(
-        self,
-        execution_config: ExecutionConfig = ExecutionConfig()
+        self, execution_config: ExecutionConfig = ExecutionConfig()
     ) -> Tuple[Any, ExecutionConfig]:
         """
         Preprocess execution configuration.
@@ -169,7 +200,7 @@ class KQCloudV2Device(Device):
     def execute(
         self,
         circuits: List[QuantumScript],
-        execution_config: ExecutionConfig = ExecutionConfig()
+        execution_config: ExecutionConfig = ExecutionConfig(),
     ) -> Tuple[Result, ...]:
         """
         Execute quantum circuits via Cloud API v2 with SSE streaming.
@@ -192,32 +223,48 @@ class KQCloudV2Device(Device):
 
         # 2. Submit batch
         batch_uuid, job_uuids = http_client.submit_batch(
-            self.host, jobs_data, self.api_key, self.target, self.max_retries
+            self.host,
+            jobs_data,
+            self.api_key,
+            self.target,
+            self.max_retries,
+            self.verify_ssl,
         )
-        logger.info(f"Submitted batch: batch_uuid={batch_uuid}, "
-                   f"jobs={len(job_uuids)}")
+        logger.info(f"Submitted batch: batch_uuid={batch_uuid}, jobs={len(job_uuids)}")
 
         # 3. Get results via SSE streaming or HTTP polling
         if self.use_streaming:
             try:
                 logger.info("Using SSE streaming mode")
                 job_results = http_client.stream_batch_results(
-                    self.host, batch_uuid, self.stream_timeout
+                    self.host, batch_uuid, self.stream_timeout, self.verify_ssl
                 )
                 logger.debug(f"Received {len(job_results)} results via SSE")
             except Exception as e:
                 logger.warning(f"SSE streaming failed: {e}")
                 logger.warning("Falling back to HTTP polling mode")
                 job_results = http_client.poll_batch_results(
-                    self.host, batch_uuid, self.api_key, self.target,
-                    self.poll_interval, self.stream_timeout, self.max_retries
+                    self.host,
+                    batch_uuid,
+                    self.api_key,
+                    self.target,
+                    self.poll_interval,
+                    self.stream_timeout,
+                    self.max_retries,
+                    self.verify_ssl,
                 )
                 logger.debug(f"Received {len(job_results)} results via polling")
         else:
             logger.info("Using HTTP polling mode")
             job_results = http_client.poll_batch_results(
-                self.host, batch_uuid, self.api_key, self.target,
-                self.poll_interval, self.stream_timeout, self.max_retries
+                self.host,
+                batch_uuid,
+                self.api_key,
+                self.target,
+                self.poll_interval,
+                self.stream_timeout,
+                self.max_retries,
+                self.verify_ssl,
             )
             logger.debug(f"Received {len(job_results)} results via polling")
 
@@ -249,13 +296,8 @@ class KQCloudV2Device(Device):
             qasm_str = qml.to_openqasm(circuit)
             shots_value = self.shots.total_shots  # shots=None은 __init__에서 차단됨
 
-            job = {
-                "type": "qasm",
-                "circuit": qasm_str,
-                "shots": shots_value
-            }
+            job = {"type": "qasm", "circuit": qasm_str, "shots": shots_value}
 
             jobs.append(job)
 
         return {"jobs": jobs}
-
