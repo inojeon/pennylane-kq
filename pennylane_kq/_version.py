@@ -1,5 +1,5 @@
 """Version information.
-   Version number (major.minor.patch[-label])
+Version number (major.minor.patch[-label])
 """
 
-__version__ = "0.0.29"
+__version__ = "0.0.30"
