@@ -6,24 +6,16 @@ Functions for validating and formatting quantum circuit execution results.
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 
 import numpy as np
 from pennylane.tape import QuantumScript
-from pennylane.measurements import (
-    ExpectationMP,
-    SampleMP,
-    CountsMP,
-    ProbabilityMP
-)
+from pennylane.measurements import ExpectationMP, SampleMP, CountsMP, ProbabilityMP
 
 logger = logging.getLogger(__name__)
 
 
-def validate_results(
-    job_results: List[Dict[str, Any]],
-    expected_count: int
-):
+def validate_results(job_results: List[Dict[str, Any]], expected_count: int):
     """
     Validate batch results.
 
@@ -35,8 +27,7 @@ def validate_results(
         RuntimeError: If validation fails
     """
     if len(job_results) != expected_count:
-        error_msg = (f"Expected {expected_count} results, "
-                    f"got {len(job_results)}")
+        error_msg = f"Expected {expected_count} results, got {len(job_results)}"
         logger.error(error_msg)
         raise RuntimeError(error_msg)
 
@@ -50,9 +41,8 @@ def validate_results(
 
 
 def process_result(
-    job_result: Dict[str, Any],
-    circuit: QuantumScript
-):
+    job_result: Dict[str, Any], circuit: QuantumScript
+) -> Union[float, np.ndarray]:
     """
     Convert Cloud API v2 result to PennyLane format.
 
@@ -79,9 +69,7 @@ def process_result(
         # Expectation value computed from counts
         if "counts" in result_data:
             return convert_counts_to_exp(
-                result_data["counts"],
-                measurement.obs.wires,
-                circuit.wires
+                result_data["counts"], measurement.obs.wires, circuit.wires
             )
         else:
             raise RuntimeError(
@@ -95,9 +83,7 @@ def process_result(
             # Convert hex counts to binary samples
             return convert_counts_to_samples(counts, circuit.wires)
         else:
-            raise RuntimeError(
-                f"Expected 'counts' in result, got: {result_data}"
-            )
+            raise RuntimeError(f"Expected 'counts' in result, got: {result_data}")
 
     elif isinstance(measurement, ProbabilityMP):
         # Probability
@@ -113,9 +99,7 @@ def process_result(
             )
 
     else:
-        raise RuntimeError(
-            f"Unsupported measurement type: {type(measurement)}"
-        )
+        raise RuntimeError(f"Unsupported measurement type: {type(measurement)}")
 
 
 def parse_count_key(state_str: str) -> int:
@@ -140,10 +124,7 @@ def parse_count_key(state_str: str) -> int:
         return int(state_str, 2)
 
 
-def convert_counts_to_samples(
-    counts: Dict[str, int],
-    wires: Any
-) -> np.ndarray:
+def convert_counts_to_samples(counts: Dict[str, int], wires: Any) -> np.ndarray:
     """
     Convert counts to binary samples (supports both hex and binary formats).
 
@@ -177,7 +158,7 @@ def convert_counts_to_samples(
             value = parse_count_key(state_str)
 
             # Convert to binary array
-            binary = format(value, f'0{num_wires}b')
+            binary = format(value, f"0{num_wires}b")
             binary_array = np.array([int(b) for b in binary])
 
             # Repeat for count
@@ -196,9 +177,7 @@ def convert_counts_to_samples(
 
 
 def convert_counts_to_exp(
-    counts: Dict[str, int],
-    obs_wires: Any,
-    all_wires: Any
+    counts: Dict[str, int], obs_wires: Any, all_wires: Any
 ) -> float:
     """
     Compute expectation value of a Z-basis observable from counts.
@@ -220,7 +199,7 @@ def convert_counts_to_exp(
 
     for state_str, count in counts.items():
         value = parse_count_key(state_str)
-        binary = format(value, f'0{num_wires}b')
+        binary = format(value, f"0{num_wires}b")
         parity = (-1) ** sum(int(binary[i]) for i in wire_indices)
         expval += parity * count
 
@@ -249,7 +228,7 @@ def counts_to_probs(counts: Dict[str, int], num_wires: int) -> np.ndarray:
         0.5
     """
     total_shots = sum(counts.values())
-    probs = np.zeros(2 ** num_wires)
+    probs = np.zeros(2**num_wires)
 
     for state_str, count in counts.items():
         value = parse_count_key(state_str)

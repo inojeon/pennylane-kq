@@ -10,18 +10,19 @@ This device integrates with the KISTI Quantum Cloud API v2 service, which provid
 - RabbitMQ-based event distribution
 - Support for both state vector and sampling execution
 
-Author: KISTI Quantum Computing Team
+Author: SY Park, QInfo team, KISTI
 Date: 2025-11-04
 """
 
 import logging
-import numpy as np
-from typing import List, Dict, Any, Tuple, Optional
+from collections.abc import Sequence
+from typing import List, Dict, Any, Tuple, Optional, Union
 
 import pennylane as qml
 from pennylane.devices import Device
 from pennylane.tape import QuantumScript
 from pennylane.transforms import broadcast_expand
+from pennylane.transforms.core.compile_pipeline import CompilePipeline
 from pennylane.typing import Result
 from pennylane.devices import ExecutionConfig
 from pennylane.measurements import ExpectationMP, SampleMP, CountsMP, ProbabilityMP
@@ -63,11 +64,14 @@ class KQCloudV2Device(Device):
         >>> result = circuit([0.5])
     """
 
-    name = "KQ Cloud API v2 Device"
     short_name = "kq.cloudv2"
     pennylane_requires = ">=0.30.0"
     version = "0.0.29"
     author = "KISTI Quantum Computing Team"
+
+    @property
+    def name(self) -> str:
+        return "KQ Cloud API v2 Device"
 
     # Supported operations (gates)
     operations = {
@@ -178,8 +182,8 @@ class KQCloudV2Device(Device):
         )
 
     def preprocess(
-        self, execution_config: ExecutionConfig = ExecutionConfig()
-    ) -> Tuple[Any, ExecutionConfig]:
+        self, execution_config: Optional[ExecutionConfig] = None
+    ) -> Tuple[CompilePipeline, ExecutionConfig]:
         """
         Preprocess execution configuration.
 
@@ -189,9 +193,11 @@ class KQCloudV2Device(Device):
         Returns:
             Tuple of (preprocessing function, updated execution config)
         """
+        if execution_config is None:
+            execution_config = ExecutionConfig()
+
         from pennylane.transforms.core import TransformProgram
 
-        # Create transform program with broadcast_expand
         program = TransformProgram()
         program.add_transform(broadcast_expand)
 
@@ -199,9 +205,9 @@ class KQCloudV2Device(Device):
 
     def execute(
         self,
-        circuits: List[QuantumScript],
-        execution_config: ExecutionConfig = ExecutionConfig(),
-    ) -> Tuple[Result, ...]:
+        circuits: Union[QuantumScript, Sequence[QuantumScript]],
+        execution_config: Optional[ExecutionConfig] = None,
+    ):
         """
         Execute quantum circuits via Cloud API v2 with SSE streaming.
 
@@ -215,6 +221,11 @@ class KQCloudV2Device(Device):
         Raises:
             DeviceError: If execution fails
         """
+        if isinstance(circuits, QuantumScript):
+            circuits = [circuits]
+        if execution_config is None:
+            execution_config = ExecutionConfig()
+
         logger.info(f"Executing {len(circuits)} circuit(s)")
 
         # 1. Serialize circuits to Cloud API v2 format
@@ -280,7 +291,7 @@ class KQCloudV2Device(Device):
         logger.info(f"Successfully executed {len(results)} circuit(s)")
         return tuple(results)
 
-    def _prepare_jobs(self, circuits: List[QuantumScript]) -> Dict[str, Any]:
+    def _prepare_jobs(self, circuits: Sequence[QuantumScript]) -> Dict[str, Any]:
         """
         Prepare jobs data for Cloud API v2 submission.
 
@@ -301,3 +312,92 @@ class KQCloudV2Device(Device):
             jobs.append(job)
 
         return {"jobs": jobs}
+
+
+class KQEmulatorDevice(KQCloudV2Device):
+    """PennyLane device for KQ Emulator.
+
+    Same API/auth/execution as KQCloudV2Device. See parent class for full parameter docs.
+    """
+
+    short_name = "kq.emulator"
+
+    @property
+    def name(self) -> str:
+        return "KQ Emulator Device"
+
+    operations = {
+        "Identity",
+        "BasisState",
+        "QubitStateVector",
+        "StatePrep",
+        "QubitUnitary",
+        "ControlledQubitUnitary",
+        "MultiControlledX",
+        "DiagonalQubitUnitary",
+        "PauliX",
+        "PauliY",
+        "PauliZ",
+        "MultiRZ",
+        "Hadamard",
+        "S",
+        "Adjoint(S)",
+        "T",
+        "Adjoint(T)",
+        "SX",
+        "Adjoint(SX)",
+        "CNOT",
+        "SWAP",
+        "ISWAP",
+        "PSWAP",
+        "Adjoint(ISWAP)",
+        "SISWAP",
+        "Adjoint(SISWAP)",
+        "SQISW",
+        "CSWAP",
+        "Toffoli",
+        "CY",
+        "CZ",
+        "PhaseShift",
+        "ControlledPhaseShift",
+        "CPhase",
+        "RX",
+        "RY",
+        "RZ",
+        "Rot",
+        "CRX",
+        "CRY",
+        "CRZ",
+        "CRot",
+        "IsingXX",
+        "IsingYY",
+        "IsingZZ",
+        "IsingXY",
+        "SingleExcitation",
+        "SingleExcitationPlus",
+        "SingleExcitationMinus",
+        "DoubleExcitation",
+        "DoubleExcitationPlus",
+        "DoubleExcitationMinus",
+        "QubitCarry",
+        "QubitSum",
+        "OrbitalRotation",
+        "QFT",
+        "ECR",
+    }
+
+    observables = {
+        "PauliX",
+        "PauliY",
+        "PauliZ",
+        "Hadamard",
+        "Hermitian",
+        "Identity",
+        "Projector",
+        "SparseHamiltonian",
+        "Hamiltonian",
+        "Sum",
+        "SProd",
+        "Prod",
+        "Exp",
+    }
