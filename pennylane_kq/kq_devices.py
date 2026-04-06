@@ -328,9 +328,9 @@ class KQEmulatorDevice(KQCloudV2Device):
 
     operations = {
         "Identity",
+        "MeasureQubit",
         "BasisState",
         "QubitStateVector",
-        "StatePrep",
         "QubitUnitary",
         "ControlledQubitUnitary",
         "MultiControlledX",
