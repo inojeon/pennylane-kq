@@ -12,6 +12,9 @@ import logging
 from typing import Dict, Any, List, Tuple, Optional, Callable
 
 import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +100,7 @@ def submit_batch(
     verify_ssl: bool = True,
 ) -> Tuple[str, List[str]]:
     """
-    Submit batch of jobs to KRISS API with automatic retry.
+    Submit batch of jobs to KISTI API with automatic retry.
 
     Args:
         host: API host URL (e.g., "http://localhost:8080")

@@ -16,9 +16,6 @@ from .result_formatter import (
     validate_results,
     process_result,
     parse_count_key,
-    convert_counts_to_dict,
-    convert_counts_to_samples,
-    counts_to_probs,
 )
 
 from .serialization_utils import (
@@ -44,9 +41,6 @@ __all__ = [
     "validate_results",
     "process_result",
     "parse_count_key",
-    "convert_counts_to_dict",
-    "convert_counts_to_samples",
-    "counts_to_probs",
     # Serialization
     "serialize_operation",
     "deserialize_operation",

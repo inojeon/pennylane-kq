@@ -15,6 +15,7 @@ Date: 2025-11-04
 """
 
 import logging
+import warnings
 from collections.abc import Sequence
 from typing import List, Dict, Any, Tuple, Optional, Union
 
@@ -34,15 +35,15 @@ logger = logging.getLogger(__name__)
 
 class KQCloudV2Device(Device):
     """
-    PennyLane device for KRISS Quantum Cloud API with SSE streaming.
+    PennyLane device for KISTI Quantum Cloud API with SSE streaming.
 
-    This device submits quantum circuits to the KRISS Quantum Cloud API service
+    This device submits quantum circuits to the KISTI Quantum Cloud API service
     and receives execution results via Server-Sent Events (SSE) or HTTP polling.
 
     Args:
         wires (int or Iterable[Number, str]]): Number of wires or wire labels
         shots (int): Number of circuit evaluations/random samples. Required;
-            statevector mode is not supported by the KRISS API.
+            statevector mode is not supported by the KISTI API.
         host (str): API base URL. Default: "https://qc-api.kisti.re.kr"
         api_key (str): QCC-API-KEY for authentication. Required.
         target (str): QCC-TARGET device code. Required.
@@ -145,7 +146,7 @@ class KQCloudV2Device(Device):
 
         Args:
             wires: Number of wires or wire labels
-            shots: Number of shots (required; KRISS API does not support statevector mode)
+            shots: Number of shots (required; KISTI API does not support statevector mode)
             host: API base URL
             api_key: QCC-API-KEY for authentication (required)
             target: QCC-TARGET device code (required)
@@ -161,10 +162,12 @@ class KQCloudV2Device(Device):
             raise ValueError("target is required")
         if shots is None:
             raise ValueError(
-                "shots is required (KRISS API does not support statevector mode)"
+                "shots is required (KISTI API does not support statevector mode)"
             )
 
-        super().__init__(wires=wires, shots=shots)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "Setting shots on device is deprecated")
+            super().__init__(wires=wires, shots=shots)
 
         self.host = host.rstrip("/")
         self.api_key = api_key
