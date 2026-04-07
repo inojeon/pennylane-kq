@@ -9,15 +9,16 @@ from .http_client import (
     request_with_retry,
     submit_batch,
     stream_batch_results,
-    poll_batch_results
+    poll_batch_results,
 )
 
 from .result_formatter import (
     validate_results,
     process_result,
     parse_count_key,
+    convert_counts_to_dict,
     convert_counts_to_samples,
-    counts_to_probs
+    counts_to_probs,
 )
 
 from .serialization_utils import (
@@ -30,7 +31,7 @@ from .serialization_utils import (
     serialize_circuit,
     deserialize_circuit,
     circuit_to_json_string,
-    json_string_to_circuit
+    json_string_to_circuit,
 )
 
 __all__ = [
@@ -43,6 +44,7 @@ __all__ = [
     "validate_results",
     "process_result",
     "parse_count_key",
+    "convert_counts_to_dict",
     "convert_counts_to_samples",
     "counts_to_probs",
     # Serialization

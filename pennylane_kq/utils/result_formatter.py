@@ -42,7 +42,7 @@ def validate_results(job_results: List[Dict[str, Any]], expected_count: int):
 
 def process_result(
     job_result: Dict[str, Any], circuit: QuantumScript
-) -> Union[float, np.ndarray]:
+) -> Union[float, np.ndarray, Dict[str, int]]:
     """
     Convert Cloud API v2 result to PennyLane format.
 
@@ -76,12 +76,15 @@ def process_result(
                 f"Expected 'counts' in result for ExpectationMP, got: {result_data}"
             )
 
-    elif isinstance(measurement, (SampleMP, CountsMP)):
-        # Sampling or counts
+    elif isinstance(measurement, CountsMP):
         if "counts" in result_data:
-            counts = result_data["counts"]
-            # Convert hex counts to binary samples
-            return convert_counts_to_samples(counts, circuit.wires)
+            return convert_counts_to_dict(result_data["counts"], len(circuit.wires))
+        else:
+            raise RuntimeError(f"Expected 'counts' in result, got: {result_data}")
+
+    elif isinstance(measurement, SampleMP):
+        if "counts" in result_data:
+            return convert_counts_to_samples(result_data["counts"], circuit.wires)
         else:
             raise RuntimeError(f"Expected 'counts' in result, got: {result_data}")
 
@@ -122,6 +125,15 @@ def parse_count_key(state_str: str) -> int:
         return int(state_str, 16)
     else:
         return int(state_str, 2)
+
+
+def convert_counts_to_dict(counts: Dict[str, int], num_wires: int) -> Dict[str, int]:
+    result = {}
+    for state_str, count in counts.items():
+        value = parse_count_key(state_str)
+        binary_key = format(value, f"0{num_wires}b")
+        result[binary_key] = count
+    return result
 
 
 def convert_counts_to_samples(counts: Dict[str, int], wires: Any) -> np.ndarray:
