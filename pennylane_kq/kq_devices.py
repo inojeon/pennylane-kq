@@ -20,14 +20,14 @@ from collections.abc import Sequence
 from typing import List, Dict, Any, Tuple, Optional, Union
 
 import pennylane as qml
-from pennylane.devices import Device
+from pennylane.devices import Device, ExecutionConfig
+from pennylane.devices.preprocess import no_analytic, validate_measurements
 from pennylane.tape import QuantumScript
-from pennylane.transforms import broadcast_expand
+from pennylane.transforms import broadcast_expand, split_non_commuting
+from pennylane.transforms.core import TransformProgram
 from pennylane.transforms.core.compile_pipeline import CompilePipeline
-from pennylane.typing import Result
-from pennylane.devices import ExecutionConfig
-from pennylane.measurements import ExpectationMP, SampleMP, CountsMP, ProbabilityMP
 
+from ._version import __version__
 from .utils import http_client, result_formatter
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class KQCloudV2Device(Device):
 
     short_name = "kq.cloudv2"
     pennylane_requires = ">=0.30.0"
-    version = "0.0.29"
+    version = __version__
     author = "KISTI Quantum Computing Team"
 
     @property
@@ -199,10 +199,22 @@ class KQCloudV2Device(Device):
         if execution_config is None:
             execution_config = ExecutionConfig()
 
-        from pennylane.transforms.core import TransformProgram
-
         program = TransformProgram()
+
+        # Reject unsupported measurements before submission. The KISTI API only
+        # returns counts, so analytic measurements (state, density_matrix,
+        # vn_entropy, mutual_info, purity) cannot be served. Without these checks
+        # the job is queued and executed before failing in result processing,
+        # which on real hardware means losing the whole queue wait.
+        program.add_transform(no_analytic, name=self.short_name)
+        program.add_transform(validate_measurements, name=self.short_name)
+
         program.add_transform(broadcast_expand)
+
+        # A circuit is measured in a single basis, so observables with
+        # non-commuting terms (most VQE Hamiltonians) must be split across
+        # several circuits. The transform's postprocessing recombines them.
+        program.add_transform(split_non_commuting)
 
         return program, execution_config
 

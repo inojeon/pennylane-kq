@@ -80,11 +80,16 @@ def test_required_param_validation():
 
 def test_device_metadata():
     """Test device metadata"""
+    import pennylane_kq
     from pennylane_kq import KQCloudV2Device
 
-    assert KQCloudV2Device.name == "KQ Cloud API v2 Device"
+    # `name` is an instance property, as in PennyLane's Device API, so reading
+    # it off the class yields the property object rather than the string.
+    dev = KQCloudV2Device(wires=1, shots=1, api_key="k", target="t")
+
+    assert dev.name == "KQ Cloud API v2 Device"
     assert KQCloudV2Device.short_name == "kq.cloudv2"
-    assert KQCloudV2Device.version == "0.0.29"
+    assert KQCloudV2Device.version == pennylane_kq.__version__
     assert KQCloudV2Device.author == "KISTI Quantum Computing Team"
     print("✅ Device metadata correct")
 

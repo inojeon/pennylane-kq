@@ -51,6 +51,10 @@ def process_result(job_result: Dict[str, Any], circuit: QuantumScript) -> Any:
     partial-wire marginalization and result formatting across all
     measurement types (expval, var, counts, sample, probs).
 
+    A circuit may carry several measurements once split_non_commuting has
+    grouped qubit-wise commuting terms into one tape; every measurement is
+    marginalized from the same counts dictionary.
+
     The backend returns counts over ALL circuit wires (since QASM measures
     every qubit), but the user may request measurements on a subset of wires
     (e.g., qml.counts(wires=range(n))). PennyLane's process_counts() handles
@@ -62,33 +66,47 @@ def process_result(job_result: Dict[str, Any], circuit: QuantumScript) -> Any:
         circuit: Original quantum circuit
 
     Returns:
-        PennyLane execution result (numpy array, float, or dict)
+        PennyLane execution result for a single measurement (numpy array,
+        float, or dict), or a tuple of them when the circuit has several
 
     Raises:
         RuntimeError: If result format is unknown or circuit has no measurements
     """
     result_data = job_result.get("result", {})
 
-    if not circuit.measurements:
+    measurements = circuit.measurements
+
+    if not measurements:
         raise RuntimeError("Circuit has no measurements")
 
-    measurement = circuit.measurements[0]
-
-    if not isinstance(measurement, SampleMeasurement):
-        raise RuntimeError(
-            f"Unsupported measurement type: {type(measurement).__name__}"
-        )
+    for measurement in measurements:
+        if not isinstance(measurement, SampleMeasurement):
+            raise RuntimeError(
+                f"Unsupported measurement type: {type(measurement).__name__}"
+            )
 
     if "counts" in result_data:
         normalized = _normalize_counts(result_data["counts"], len(circuit.wires))
-        return measurement.process_counts(normalized, circuit.wires)
+        results = tuple(
+            measurement.process_counts(normalized, circuit.wires)
+            for measurement in measurements
+        )
     elif "probabilities" in result_data:
-        return np.array(result_data["probabilities"])
+        if len(measurements) > 1:
+            raise RuntimeError(
+                f"Backend returned 'probabilities' but the circuit has "
+                f"{len(measurements)} measurements, which cannot be "
+                f"marginalized independently. Expected 'counts'."
+            )
+        results = (np.array(result_data["probabilities"]),)
     else:
         raise RuntimeError(
             f"Expected 'counts' or 'probabilities' in result, "
             f"got: {list(result_data.keys())}"
         )
+
+    # PennyLane expects a bare value for one measurement, a tuple for several.
+    return results[0] if len(results) == 1 else results
 
 
 def parse_count_key(state_str: str) -> int:
