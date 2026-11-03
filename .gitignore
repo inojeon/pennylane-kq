@@ -137,3 +137,8 @@ dmypy.json
 
 # Pycharm
 .idea
+
+# Local documentation and agent guidance
+/docs/
+/AGENTS.md
+/CLAUDE.md

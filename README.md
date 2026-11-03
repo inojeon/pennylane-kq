@@ -1,10 +1,57 @@
 # PennyLane-KQ
 
+## QPU access
+
+| Device | Target | Resource |
+| --- | --- | --- |
+| `kq.emulator` | `kisti.emulator` | KISTI emulator |
+| `kq.qpu` | `kriss.hw_20q` | KRISS 20-qubit QPU |
+| `kq.qpu` | `kriss.hw_50q` | KRISS 50-qubit QPU |
+
+```python
+import os
+import pennylane as qml
+
+dev = qml.device("kq.qpu", target="kriss.hw_20q", wires=3, shots=1024,
+                 api_key=os.environ["KQ_API_KEY"])
+
+@qml.qnode(dev)
+def circuit():
+    qml.Hadamard(0)
+    qml.CNOT([0, 1])
+    return qml.counts(wires=[0, 1])
+
+# circuit() submits a real hardware job.
+```
+
+Reinstall the package and restart notebook kernels after adding the device.
+The host is the cloud web service; that service must register both target codes
+and route them to the corresponding KRISS execution services. The plugin does
+not provision routing. KRISS emulator_api uses krios for native gate compilation,
+topology routing and physical qubit mapping.
+
+QPU target and wires are explicit. Nominal capacity is 20/50 qubits; the server
+determines current availability. Wires are logical labels, not physical choices.
+Finite shots are required. Polling and the existing 1800-second total wait remain
+the defaults; set stream_timeout for longer queue waits. Timeout does not cancel
+the server job. Existing gate metadata does not enforce native gate decomposition.
+
+Offline checks:
+
+```bash
+python -m unittest discover -s test -p test_qpu_device.py
+# Optional: requires Qiskit
+python -m unittest discover -s test -p test_qasm_compatibility.py
+```
+
+Before production use, verify routing and small-circuit results on both real
+targets. Offline tests do not verify hardware availability or krios configuration.
+
 PennyLane plugin for KISTI Quantum Cloud API v2.
 
 ## Overview
 
-**pennylane-kq** provides a PennyLane device (`kq.cloudv2`) for executing quantum circuits on KISTI's quantum computing cloud infrastructure.
+**pennylane-kq** provides `kq.emulator` for the KISTI emulator and `kq.qpu` for KRISS quantum hardware through KISTI's cloud web service.
 
 ### Features
 
@@ -43,11 +90,11 @@ pip install pennylane-kq
 import pennylane as qml
 
 # Create device
-dev = qml.device('kq.cloudv2',
+dev = qml.device('kq.emulator',
                  wires=2,
                  shots=1024,
                  api_key="your-api-key",
-                 target="kisti.sim1")
+                 target="kisti.emulator")
 
 # Define circuit
 @qml.qnode(dev)
@@ -76,11 +123,11 @@ print(f"Expectation value: {result}")
 ## Examples
 
 ```python
-dev = qml.device('kq.cloudv2',
+dev = qml.device('kq.emulator',
                  wires=2,
                  shots=1024,
                  api_key="your-api-key",
-                 target="kisti.sim1")
+                 target="kisti.emulator")
 
 @qml.qnode(dev)
 def circuit():
@@ -91,21 +138,16 @@ def circuit():
 samples = circuit()  # Returns numpy array of 1024 samples
 ```
 
-## Documentation
-
-- **Developer Guide**: [CLAUDE.md](CLAUDE.md) - Comprehensive developer documentation
-- **API Specification**: [docs/API_SPECIFICATION_QCC.md](docs/API_SPECIFICATION_QCC.md) - API details
-
 ## Testing
 
-Run basic tests:
+Run offline QPU tests:
 ```bash
-python tests/test_kq_cloudv2_basic.py
+python -m unittest discover -s test -p test_qpu_device.py
 ```
 
-Run integration tests (requires valid `api_key` and `target`):
+Run optional QASM compatibility tests (requires Qiskit):
 ```bash
-python tests/test_kq_cloudv2_integration.py
+python -m unittest discover -s test -p test_qasm_compatibility.py
 ```
 
 ## Troubleshooting
@@ -116,11 +158,11 @@ SSE Streaming is not available now.
 Please use HTTP polling mode instead. (`use_streaming=False`)
 ### Device Not Found Error
 
-If you get `DeviceError: Device 'kq.cloudv2' not found`, make sure the package is installed:
+If you get a device-not-found error for `kq.emulator` or `kq.qpu`, make sure the package is installed:
 
 ```bash
 pip install -e .
-python -c "from pennylane_kq import KQCloudV2Device; print('OK')"
+python -c "from pennylane_kq import KQEmulatorDevice, KQQPUDevice; print('OK')"
 ```
 
 ### Authentication Error
@@ -128,11 +170,11 @@ python -c "from pennylane_kq import KQCloudV2Device; print('OK')"
 If you get an authentication error, check that your `api_key` and `target` are correct:
 
 ```python
-dev = qml.device('kq.cloudv2',
+dev = qml.device('kq.emulator',
                  wires=2,
                  shots=1024,
                  api_key="your-api-key",   # Check this
-                 target="kisti.sim1")       # Check this
+                 target="kisti.emulator")   # Check this
 ```
 
 
@@ -153,7 +195,8 @@ BSD-2-Clause
 
 ## Contributing
 
-For development setup and guidelines, see [CLAUDE.md](CLAUDE.md).
+Install the project with `python -m pip install -e .` and run the offline
+tests listed above before submitting changes.
 
 ## Support
 

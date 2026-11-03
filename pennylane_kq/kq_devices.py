@@ -15,13 +15,18 @@ Date: 2025-11-04
 """
 
 import logging
+import re
 import warnings
 from collections.abc import Sequence
 from typing import List, Dict, Any, Tuple, Optional, Union
 
 import pennylane as qml
 from pennylane.devices import Device, ExecutionConfig
-from pennylane.devices.preprocess import no_analytic, validate_measurements
+from pennylane.devices.preprocess import (
+    no_analytic,
+    validate_device_wires,
+    validate_measurements,
+)
 from pennylane.tape import QuantumScript
 from pennylane.transforms import broadcast_expand, split_non_commuting
 from pennylane.transforms.core import TransformProgram
@@ -43,7 +48,8 @@ class KQCloudV2Device(Device):
     Args:
         wires (int or Iterable[Number, str]]): Number of wires or wire labels
         shots (int): Number of circuit evaluations/random samples. Required;
-            statevector mode is not supported by the KISTI API.
+            statevector mode is not supported by the KISTI API. This device does
+            not support shot vectors.
         host (str): API base URL. Default: "https://qc-api.kisti.re.kr"
         api_key (str): QCC-API-KEY for authentication. Required.
         target (str): QCC-TARGET device code. Required.
@@ -169,6 +175,8 @@ class KQCloudV2Device(Device):
             warnings.filterwarnings("ignore", "Setting shots on device is deprecated")
             super().__init__(wires=wires, shots=shots)
 
+        self._validate_shots(self.shots)
+
         self.host = host.rstrip("/")
         self.api_key = api_key
         self.target = target
@@ -183,6 +191,16 @@ class KQCloudV2Device(Device):
             f"wires={len(self.wires)}, shots={self.shots}, "
             f"target={self.target}, use_streaming={self.use_streaming}"
         )
+
+    @staticmethod
+    def _validate_shots(shots):
+        """Require one finite shot count per circuit for counts-based results."""
+        if not shots:
+            raise ValueError("finite shots are required for every circuit")
+        if shots.has_partitioned_shots:
+            raise ValueError(
+                "Shot vectors are not supported; use a single positive integer for shots"
+            )
 
     def preprocess(
         self, execution_config: Optional[ExecutionConfig] = None
@@ -200,6 +218,10 @@ class KQCloudV2Device(Device):
             execution_config = ExecutionConfig()
 
         program = TransformProgram()
+
+        # Bind measurements without explicit wires to all device wires, including
+        # idle wires, before grouping measurements and serializing the circuit.
+        program.add_transform(validate_device_wires, wires=self.wires, name=self.short_name)
 
         # Reject unsupported measurements before submission. The KISTI API only
         # returns counts, so analytic measurements (state, density_matrix,
@@ -238,6 +260,14 @@ class KQCloudV2Device(Device):
         """
         if isinstance(circuits, QuantumScript):
             circuits = [circuits]
+        # Direct execute() calls may bypass preprocessing. Serialization and
+        # result formatting must use the same resolved measurement wires.
+        circuits = [
+            validate_device_wires(circuit, wires=self.wires, name=self.short_name)[0][0]
+            if any(not m.obs and not m.wires for m in circuit.measurements)
+            else circuit
+            for circuit in circuits
+        ]
         if execution_config is None:
             execution_config = ExecutionConfig()
 
@@ -319,14 +349,64 @@ class KQCloudV2Device(Device):
         jobs = []
 
         for circuit in circuits:
+            self._validate_shots(circuit.shots)
             qasm_str = qml.to_openqasm(circuit)
-            shots_value = self.shots.total_shots  # shots=None은 __init__에서 차단됨
+            # The exporter may emit OpenQASM 3 gphase statements in QASM 2.
+            # Only unconditional global phase is removable: it cannot affect
+            # terminal measurement probabilities. Controlled phases stay intact.
+            qasm_str = "\n".join(
+                line for line in qasm_str.splitlines()
+                if not re.fullmatch(
+                    r"\s*gphase\([^;]*\)\s*(?:q\[\d+\](?:,\s*q\[\d+\])*)?\s*;\s*",
+                    line,
+                )
+            ) + "\n"
+            shots_value = circuit.shots.total_shots
 
             job = {"type": "qasm", "circuit": qasm_str, "shots": shots_value}
 
             jobs.append(job)
 
         return {"jobs": jobs}
+
+
+class KQQPUDevice(KQCloudV2Device):
+    """KRISS hardware through the KISTI cloud service.
+
+    Native gate compilation, routing and physical qubit selection are server
+    responsibilities. Target capacities describe nominal, not available, qubits.
+    """
+
+    short_name = "kq.qpu"
+    target_capacities = {"kriss.hw_20q": 20, "kriss.hw_50q": 50}
+
+    @property
+    def name(self):
+        return "KQ QPU Device"
+
+    def __init__(self, wires=None, shots=None, *, target=None, **kwargs):
+        if target not in self.target_capacities:
+            raise ValueError(
+                f"Unsupported QPU target {target!r}; choose "
+                + ", ".join(self.target_capacities)
+            )
+        if wires is None:
+            raise ValueError("wires is required for kq.qpu")
+        super().__init__(wires=wires, shots=shots, target=target, **kwargs)
+        self._validate_capacity(self.wires)
+
+    def _validate_capacity(self, wires):
+        capacity = self.target_capacities[self.target]
+        if len(wires) > capacity:
+            raise ValueError(f"{self.target} supports at most {capacity} wires")
+
+    def _prepare_jobs(self, circuits):
+        # Also guard direct execute() calls, which bypass QNode preprocessing.
+        for circuit in circuits:
+            self._validate_capacity(circuit.wires)
+            if not set(circuit.wires).issubset(self.wires):
+                raise ValueError("Circuit wires must belong to the device wires")
+        return super()._prepare_jobs(circuits)
 
 
 class KQEmulatorDevice(KQCloudV2Device):
