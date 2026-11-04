@@ -1,6 +1,6 @@
 """
-HTTP Client for Cloud API v2
-============================
+HTTP Client for the KISTI Quantum Cloud API
+=========================================
 
 HTTP communication functions for batch job submission, SSE streaming, and polling.
 """
@@ -105,8 +105,8 @@ def submit_batch(
     Args:
         host: API host URL (e.g., "http://localhost:8080")
         jobs_data: Jobs data in API format
-        api_key: QCC-API-KEY header value
-        target: QCC-TARGET header value
+        api_key: QC-API-KEY header value
+        target: QC-TARGET header value
         max_retries: Maximum number of retries (default: 3)
         verify_ssl: Whether to verify SSL certificates (default: True)
 
@@ -119,8 +119,8 @@ def submit_batch(
     url = f"{host}/kriss/batch-jobs"
     headers = {
         "Content-Type": "application/json",
-        "QCC-API-KEY": api_key,
-        "QCC-TARGET": target,
+        "QC-API-KEY": api_key,
+        "QC-TARGET": target,
     }
 
     def submit_request():
@@ -157,7 +157,7 @@ def stream_batch_results(
     Stream batch results via SSE.
 
     Args:
-        host: Cloud API v2 host URL (e.g., "http://localhost:8080")
+        host: KISTI Quantum Cloud API URL (e.g., "https://qc-api.kisti.re.kr")
         batch_uuid: Batch UUID
         stream_timeout: SSE timeout in seconds (default: 1800.0)
         verify_ssl: Whether to verify SSL certificates (default: True)
@@ -215,7 +215,7 @@ def stream_batch_results(
                     # Batch completed - extract all results
                     logger.info("Batch completed")
 
-                    # Cloud API v2 returns data in nested structure
+                    # The streaming endpoint returns data in a nested structure
                     batch_data = event_data.get("data", {})
                     jobs = batch_data.get("jobs", [])
 
@@ -279,8 +279,8 @@ def poll_batch_results(
     Args:
         host: API host URL (e.g., "http://localhost:8080")
         batch_uuid: Batch UUID
-        api_key: QCC-API-KEY header value
-        target: QCC-TARGET header value
+        api_key: QC-API-KEY header value
+        target: QC-TARGET header value
         poll_interval: Time between polls in seconds (default: 2.0)
         max_wait: Maximum wait time in seconds (default: 1800.0)
         max_retries: Maximum retries per request (default: 3)
@@ -295,8 +295,8 @@ def poll_batch_results(
     status_url = f"{host}/kriss/batch-jobs/{batch_uuid}"
     results_url = f"{host}/kriss/batch-jobs/{batch_uuid}/results"
     headers = {
-        "QCC-API-KEY": api_key,
-        "QCC-TARGET": target,
+        "QC-API-KEY": api_key,
+        "QC-TARGET": target,
     }
 
     logger.info(f"Starting HTTP polling: {status_url}")

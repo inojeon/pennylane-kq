@@ -1,5 +1,5 @@
 PYTHON := python3
-TESTRUNNER := -m pytest tests --tb=native -vv -s
+TESTRUNNER := -m pytest test/test_kq_devices_basic.py test/test_http_client.py test/test_qpu_device.py test/test_qasm_compatibility.py --tb=native -vv -s
 COVERAGE := --cov=pennylane_kq --cov-report term-missing --cov-report=html:coverage_html_report
 
 .PHONY: help

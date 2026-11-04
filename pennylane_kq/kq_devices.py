@@ -1,14 +1,9 @@
 """
-KQ Cloud API v2 Device
-======================
+KISTI Quantum Cloud devices
+==========================
 
-PennyLane device for executing quantum circuits via Cloud API v2 with SSE streaming.
-
-This device integrates with the KISTI Quantum Cloud API v2 service, which provides:
-- REST API for batch job submission
-- Server-Sent Events (SSE) for real-time status updates
-- RabbitMQ-based event distribution
-- Support for both state vector and sampling execution
+PennyLane emulator and QPU devices sharing OpenQASM 2 batch submission,
+HTTP polling, optional SSE streaming, and counts-based result processing.
 
 Author: SY Park, QInfo team, KISTI
 Date: 2025-11-04
@@ -38,9 +33,9 @@ from .utils import http_client, result_formatter
 logger = logging.getLogger(__name__)
 
 
-class KQCloudV2Device(Device):
+class _KQBaseDevice(Device):
     """
-    PennyLane device for KISTI Quantum Cloud API with SSE streaming.
+    Internal base for the KISTI emulator and KRISS QPU devices.
 
     This device submits quantum circuits to the KISTI Quantum Cloud API service
     and receives execution results via Server-Sent Events (SSE) or HTTP polling.
@@ -51,8 +46,8 @@ class KQCloudV2Device(Device):
             statevector mode is not supported by the KISTI API. This device does
             not support shot vectors.
         host (str): API base URL. Default: "https://qc-api.kisti.re.kr"
-        api_key (str): QCC-API-KEY for authentication. Required.
-        target (str): QCC-TARGET device code. Required.
+        api_key (str): QC-API-KEY for authentication. Required.
+        target (str): QC-TARGET device code. Required.
         stream_timeout (float): SSE stream timeout in seconds. Default: 1800.0 (30 minutes)
         max_retries (int): Maximum number of retries for failed requests. Default: 3
         use_streaming (bool): Use SSE streaming (True) or HTTP polling (False). Default: False
@@ -61,8 +56,8 @@ class KQCloudV2Device(Device):
 
     Example:
         >>> import pennylane as qml
-        >>> dev = qml.device('kq.cloudv2', wires=2, shots=1024,
-        ...                  api_key="your-api-key", target="kisti.sim1")
+        >>> dev = qml.device('kq.emulator', wires=2, shots=1024,
+        ...                  api_key="your-api-key", target="kisti.emulator")
         >>> @qml.qnode(dev)
         ... def circuit(params):
         ...     qml.RY(params[0], wires=0)
@@ -71,14 +66,9 @@ class KQCloudV2Device(Device):
         >>> result = circuit([0.5])
     """
 
-    short_name = "kq.cloudv2"
     pennylane_requires = ">=0.30.0"
     version = __version__
     author = "KISTI Quantum Computing Team"
-
-    @property
-    def name(self) -> str:
-        return "KQ Cloud API v2 Device"
 
     # Supported operations (gates)
     operations = {
@@ -148,14 +138,14 @@ class KQCloudV2Device(Device):
         verify_ssl: bool = True,
     ):
         """
-        Initialize KQ Cloud API v2 device.
+        Initialize a KISTI Quantum Cloud device.
 
         Args:
             wires: Number of wires or wire labels
             shots: Number of shots (required; KISTI API does not support statevector mode)
             host: API base URL
-            api_key: QCC-API-KEY for authentication (required)
-            target: QCC-TARGET device code (required)
+            api_key: QC-API-KEY for authentication (required)
+            target: QC-TARGET device code (required)
             stream_timeout: SSE timeout in seconds
             max_retries: Maximum number of retries for failed requests
             use_streaming: Use SSE streaming (True) or polling (False)
@@ -187,7 +177,7 @@ class KQCloudV2Device(Device):
         self.verify_ssl = verify_ssl
 
         logger.info(
-            f"Initialized KQCloudV2Device: host={self.host}, "
+            f"Initialized {type(self).__name__}: host={self.host}, "
             f"wires={len(self.wires)}, shots={self.shots}, "
             f"target={self.target}, use_streaming={self.use_streaming}"
         )
@@ -246,7 +236,7 @@ class KQCloudV2Device(Device):
         execution_config: Optional[ExecutionConfig] = None,
     ):
         """
-        Execute quantum circuits via Cloud API v2 with SSE streaming.
+        Execute quantum circuits via HTTP polling or SSE streaming.
 
         Args:
             circuits: List of quantum circuits (QuantumScript)
@@ -273,7 +263,7 @@ class KQCloudV2Device(Device):
 
         logger.info(f"Executing {len(circuits)} circuit(s)")
 
-        # 1. Serialize circuits to Cloud API v2 format
+        # 1. Serialize circuits as OpenQASM 2 batch jobs
         jobs_data = self._prepare_jobs(circuits)
         logger.debug(f"Prepared jobs data: {len(jobs_data['jobs'])} jobs")
 
@@ -338,13 +328,13 @@ class KQCloudV2Device(Device):
 
     def _prepare_jobs(self, circuits: Sequence[QuantumScript]) -> Dict[str, Any]:
         """
-        Prepare jobs data for Cloud API v2 submission.
+        Prepare OpenQASM 2 jobs for KISTI Quantum Cloud submission.
 
         Args:
             circuits: List of quantum circuits
 
         Returns:
-            Jobs data in Cloud API v2 format
+            Batch payload containing QASM circuits and finite shot counts
         """
         jobs = []
 
@@ -370,7 +360,7 @@ class KQCloudV2Device(Device):
         return {"jobs": jobs}
 
 
-class KQQPUDevice(KQCloudV2Device):
+class KQQPUDevice(_KQBaseDevice):
     """KRISS hardware through the KISTI cloud service.
 
     Native gate compilation, routing and physical qubit selection are server
@@ -409,10 +399,11 @@ class KQQPUDevice(KQCloudV2Device):
         return super()._prepare_jobs(circuits)
 
 
-class KQEmulatorDevice(KQCloudV2Device):
+class KQEmulatorDevice(_KQBaseDevice):
     """PennyLane device for KQ Emulator.
 
-    Same API/auth/execution as KQCloudV2Device. See parent class for full parameter docs.
+    Shares API authentication and execution with the QPU device through
+    _KQBaseDevice. See the parent class for full parameter docs.
     """
 
     short_name = "kq.emulator"

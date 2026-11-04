@@ -36,22 +36,32 @@ Finite shots are required. Polling and the existing 1800-second total wait remai
 the defaults; set stream_timeout for longer queue waits. Timeout does not cancel
 the server job. Existing gate metadata does not enforce native gate decomposition.
 
-Offline checks:
-
-```bash
-python -m unittest discover -s test -p test_qpu_device.py
-# Optional: requires Qiskit
-python -m unittest discover -s test -p test_qasm_compatibility.py
-```
+See [Testing](#testing) for the offline suites covering device registration,
+shared execution, HTTP requests, and optional QASM compatibility.
 
 Before production use, verify routing and small-circuit results on both real
 targets. Offline tests do not verify hardware availability or krios configuration.
 
-PennyLane plugin for KISTI Quantum Cloud API v2.
+PennyLane plugin for the KISTI Quantum Cloud service.
 
 ## Overview
 
 **pennylane-kq** provides `kq.emulator` for the KISTI emulator and `kq.qpu` for KRISS quantum hardware through KISTI's cloud web service.
+
+These are the only public devices. Both share the internal `_KQBaseDevice`
+implementation for preprocessing, OpenQASM 2 submission, and result processing.
+See the [device user guide](KQ_DEVICE_USER_GUIDE.md) for configuration and batch examples.
+
+### Migrating existing notebooks
+
+`kq.cloudv2` and the public `KQCloudV2Device` class have been removed.
+Replace emulator calls with `qml.device("kq.emulator", ...)` and
+`target="kisti.emulator"`, or use `qml.device("kq.qpu", ...)` with an explicit
+KRISS target and `wires` for hardware. Replace direct class imports with
+`KQEmulatorDevice` or `KQQPUDevice`. The internal base class is not a public device.
+
+After updating the checkout, run `python -m pip install -e .` and restart the
+Jupyter kernel so PennyLane reloads the device registrations.
 
 ### Features
 
@@ -67,9 +77,11 @@ PennyLane plugin for KISTI Quantum Cloud API v2.
 ```bash
 pip install git+https://github.com/inojeon/pennylane-kq.git
 ```
-or
+
+For a local checkout:
+
 ```bash
-pip install https://github.com/inojeon/pennylane-kq/releases/download/v0.0.29/pennylane_kq-0.0.29-py3-none-any.whl
+python -m pip install -e .
 ```
 
 ### From PyPI (Coming Soon)
@@ -110,13 +122,13 @@ print(f"Expectation value: {result}")
 
 ## Device Parameters
 
-- `wires` (int, required): Number of qubits
-- `shots` (int, required): Number of shots (statevector mode is not supported)
-- `api_key` (str, required): QCC-API-KEY for authentication
-- `target` (str, required): QCC-TARGET device code
-- `host` (str): Cloud API v2 URL (default: "https://qc-api.kisti.re.kr")
+- `wires` (int or iterable): Number of qubits or wire labels; required for `kq.qpu`
+- `shots` (int, required): One positive shot count; statevector mode and shot vectors are unsupported
+- `api_key` (str, required): QC-API-KEY for authentication
+- `target` (str, required): QC-TARGET device code
+- `host` (str): KISTI Quantum Cloud API URL (default: "https://qc-api.kisti.re.kr")
 - `use_streaming` (bool): Use SSE streaming (default: False)
-- `stream_timeout` (float): SSE timeout in seconds (default: 1800.0)
+- `stream_timeout` (float): Total polling wait limit / SSE timeout in seconds (default: 1800.0)
 - `poll_interval` (float): Polling interval in seconds (default: 2.0)
 - `max_retries` (int): Maximum retries for failed requests (default: 3)
 
@@ -140,8 +152,11 @@ samples = circuit()  # Returns numpy array of 1024 samples
 
 ## Testing
 
-Run offline QPU tests:
+Run the offline device and HTTP tests (no remote jobs are submitted):
+
 ```bash
+python test/test_kq_devices_basic.py
+python -m unittest discover -s test -p test_http_client.py
 python -m unittest discover -s test -p test_qpu_device.py
 ```
 
@@ -149,6 +164,10 @@ Run optional QASM compatibility tests (requires Qiskit):
 ```bash
 python -m unittest discover -s test -p test_qasm_compatibility.py
 ```
+
+`make test` also runs only these offline suites. Scripts such as
+`test/test_counts.py`, `test/test_batch_emulator.py`, and `test/test_qpu.py`
+submit remote jobs and require configured credentials and targets.
 
 ## Troubleshooting
 
@@ -181,7 +200,7 @@ dev = qml.device('kq.emulator',
 
 ## Version
 
-Current version: **0.0.29**
+Current version: **0.0.31** (see `pennylane_kq/_version.py`).
 
 ## Authors
 

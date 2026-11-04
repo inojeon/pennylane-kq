@@ -6,7 +6,6 @@ with open("pennylane_kq/_version.py") as f:
 
 
 pennylane_devices_list = [
-    "kq.cloudv2 = pennylane_kq:KQCloudV2Device",
     "kq.emulator = pennylane_kq:KQEmulatorDevice",
     "kq.qpu = pennylane_kq:KQQPUDevice",
 ]

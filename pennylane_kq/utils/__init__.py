@@ -1,6 +1,6 @@
 """
-Utility modules for KQCloudV2Device
-====================================
+KQ device utilities
+===================
 
 HTTP communication, result formatting, and circuit serialization utilities.
 """

@@ -1,6 +1,6 @@
 """
-Result Formatter for Cloud API v2
-===================================
+Result Formatter for the KISTI Quantum Cloud API
+==============================================
 
 Functions for validating and formatting quantum circuit execution results.
 
@@ -45,7 +45,7 @@ def validate_results(job_results: List[Dict[str, Any]], expected_count: int):
 
 def process_result(job_result: Dict[str, Any], circuit: QuantumScript) -> Any:
     """
-    Convert Cloud API v2 result to PennyLane format.
+    Convert a KISTI Quantum Cloud result to PennyLane format.
 
     Uses PennyLane's built-in measurement.process_counts() for correct
     partial-wire marginalization and result formatting across all
@@ -62,7 +62,7 @@ def process_result(job_result: Dict[str, Any], circuit: QuantumScript) -> Any:
     over the rest.
 
     Args:
-        job_result: Job result from Cloud API v2
+        job_result: Job result from the KISTI Quantum Cloud API
         circuit: Original quantum circuit
 
     Returns:
