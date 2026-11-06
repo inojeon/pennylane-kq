@@ -1,19 +1,19 @@
 # PennyLane-KQ
 
-## QPU access
+## Devices and targets
 
 | Device | Target | Resource |
 | --- | --- | --- |
+| `kq.emulator` | `kisti.sim1` | Simulator |
 | `kq.emulator` | `kisti.emulator` | KISTI emulator |
 | `kq.qpu` | `kriss.hw_20q` | KRISS 20-qubit QPU |
 | `kq.qpu` | `kriss.hw_50q` | KRISS 50-qubit QPU |
 
 ```python
-import os
 import pennylane as qml
 
 dev = qml.device("kq.qpu", target="kriss.hw_20q", wires=3, shots=1024,
-                 api_key=os.environ["KQ_API_KEY"])
+                 api_key="your-api-key")
 
 @qml.qnode(dev)
 def circuit():
@@ -46,7 +46,12 @@ PennyLane plugin for the KISTI Quantum Cloud service.
 
 ## Overview
 
-**pennylane-kq** provides `kq.emulator` for the KISTI emulator and `kq.qpu` for KRISS quantum hardware through KISTI's cloud web service.
+**pennylane-kq** provides `kq.emulator` for software simulation and `kq.qpu` for KRISS quantum hardware through KISTI's cloud web service.
+
+With `kq.emulator`, select `target="kisti.sim1"` for the simulator running
+locally in the cloud service, or `target="kisti.emulator"` for the KISTI
+emulator. The plugin submits both to the cloud API; the server routes jobs
+using the `QC-TARGET` header. The simulator runs on the cloud server.
 
 These are the only public devices. Both share the internal `_KQBaseDevice`
 implementation for preprocessing, OpenQASM 2 submission, and result processing.
@@ -56,7 +61,8 @@ See the [device user guide](KQ_DEVICE_USER_GUIDE.md) for configuration and batch
 
 `kq.cloudv2` and the public `KQCloudV2Device` class have been removed.
 Replace emulator calls with `qml.device("kq.emulator", ...)` and
-`target="kisti.emulator"`, or use `qml.device("kq.qpu", ...)` with an explicit
+`target="kisti.sim1"` for cloud-local simulation or `target="kisti.emulator"`
+for the KISTI emulator. Use `qml.device("kq.qpu", ...)` with an explicit
 KRISS target and `wires` for hardware. Replace direct class imports with
 `KQEmulatorDevice` or `KQQPUDevice`. The internal base class is not a public device.
 
@@ -152,22 +158,44 @@ samples = circuit()  # Returns numpy array of 1024 samples
 
 ## Testing
 
-Run the offline device and HTTP tests (no remote jobs are submitted):
+All scripts stay in `test/`; the filename prefix identifies their purpose:
+
+| Prefix | Files | Purpose |
+| --- | --- | --- |
+| `test_` | `test_devices.py`, `test_http_client.py`, `test_qasm_compatibility.py` | Offline automated tests |
+| `example_` | `example_emulator.py`, `example_qpu.py` | Remote circuit execution examples |
+| `benchmark_` | `benchmark_bernstein_vazirani.py`, `benchmark_random_circuit.py` | Performance benchmarks including cloud execution |
+
+Run all offline tests (no remote jobs are submitted):
 
 ```bash
-python test/test_kq_devices_basic.py
-python -m unittest discover -s test -p test_http_client.py
-python -m unittest discover -s test -p test_qpu_device.py
+python -m unittest discover -s test -p 'test_*.py'
 ```
 
-Run optional QASM compatibility tests (requires Qiskit):
-```bash
-python -m unittest discover -s test -p test_qasm_compatibility.py
+`make test` runs the same offline suites using Python's built-in unittest
+runner. The QASM compatibility suite runs when Qiskit is installed and otherwise
+skips. The optional `make coverage` target requires pytest and pytest-cov.
+
+### Execution examples and benchmarks
+
+Set `API_KEY = "your-api-key"` to your issued API key in each script before
+running it. `TARGET` and `SHOTS` can also be edited at the top of the examples.
+In JupyterLab, run:
+
+```ipython
+%run test/example_emulator.py --target kisti.sim1
+%run test/example_emulator.py --target kisti.emulator --mode batch
+%run test/example_qpu.py --target kriss.hw_20q
 ```
 
-`make test` also runs only these offline suites. Scripts such as
-`test/test_counts.py`, `test/test_batch_emulator.py`, and `test/test_qpu.py`
-submit remote jobs and require configured credentials and targets.
+For terminal execution, replace `%run` with `python`. The emulator example
+supports Bell counts and a three-circuit batch. The QPU example submits one
+Bell circuit and reports counts, shot totals, and probabilities.
+
+The two `benchmark_*.py` scripts can be run the same way. They compare
+Bernstein-Vazirani execution or measure a deep random circuit. Examples and
+benchmarks submit remote jobs when executed; importing them does not execute
+circuits.
 
 ## Troubleshooting
 

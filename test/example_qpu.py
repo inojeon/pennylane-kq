@@ -2,7 +2,7 @@
 
 JupyterLab:
     Set API_KEY below to your cloud service API key, then run:
-    %run test/run_qpu_hardware.py --target kriss.hw_20q
+    %run test/example_qpu.py --target kriss.hw_20q
 
 Use --target kriss.hw_50q for the other device. Importing this module does
 not submit a job. Executing it does. Client timeout does not cancel the job.
@@ -14,6 +14,8 @@ import time
 import pennylane as qml
 
 API_KEY = "your-api-key"  # 실행 전에 발급받은 API 키를 입력하세요.
+TARGET = "kriss.hw_50q"  # Or "kriss.hw_20q".
+SHOTS = 1024
 
 
 def positive_int(value):
@@ -25,9 +27,9 @@ def positive_int(value):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--target", required=True,
+    parser.add_argument("--target", default=TARGET,
                         choices=("kriss.hw_20q", "kriss.hw_50q"))
-    parser.add_argument("--shots", type=positive_int, default=1024)
+    parser.add_argument("--shots", type=positive_int, default=SHOTS)
     parser.add_argument("--timeout", type=positive_int, default=1800,
                         help="Total result wait in seconds; does not cancel jobs")
     parser.add_argument("--host", default="https://qc-api.kisti.re.kr")

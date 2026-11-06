@@ -400,7 +400,11 @@ class KQQPUDevice(_KQBaseDevice):
 
 
 class KQEmulatorDevice(_KQBaseDevice):
-    """PennyLane device for KQ Emulator.
+    """PennyLane device for software simulation through the KISTI cloud service.
+
+    Select target="kisti.sim1" for the cloud service's local simulator or
+    target="kisti.emulator" for the KISTI emulator. The target is passed to the
+    server in QC-TARGET; the server determines execution routing.
 
     Shares API authentication and execution with the QPU device through
     _KQBaseDevice. See the parent class for full parameter docs.

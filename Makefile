@@ -1,5 +1,5 @@
 PYTHON := python3
-TESTRUNNER := -m pytest test/test_kq_devices_basic.py test/test_http_client.py test/test_qpu_device.py test/test_qasm_compatibility.py --tb=native -vv -s
+TESTRUNNER := -m unittest discover -s test -p 'test_*.py' -v
 COVERAGE := --cov=pennylane_kq --cov-report term-missing --cov-report=html:coverage_html_report
 
 .PHONY: help
@@ -8,7 +8,6 @@ help:
 	@echo "  install     - to install pennylane_kq"
 	@echo "  test        - to run the unittests"
 	@echo "  coverage    - to generate a coverage report"
-	@echo "  benchmark   - to run a few benchmarks"
 
 .PHONY: install
 install:
@@ -29,4 +28,4 @@ test:
 .PHONY: coverage
 coverage:
 	@echo "Generating coverage report..."
-	$(PYTHON) $(TESTRUNNER) $(COVERAGE)
+	$(PYTHON) -m pytest test/test_*.py $(COVERAGE)

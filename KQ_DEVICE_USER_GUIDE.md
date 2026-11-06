@@ -5,6 +5,7 @@ Jupyter notebooks:
 
 | Device | Class | Target | Resource |
 | --- | --- | --- | --- |
+| `kq.emulator` | `KQEmulatorDevice` | `kisti.sim1` | Simulator |
 | `kq.emulator` | `KQEmulatorDevice` | `kisti.emulator` | KISTI emulator |
 | `kq.qpu` | `KQQPUDevice` | `kriss.hw_20q` | KRISS 20-qubit QPU |
 | `kq.qpu` | `KQQPUDevice` | `kriss.hw_50q` | KRISS 50-qubit QPU |
@@ -27,18 +28,17 @@ PennyLane reloads its device registrations.
 
 ## Emulator example
 
-Set `KQ_API_KEY` in your environment before running this example. Creating a
-device does not submit a job; calling the QNode does.
+Replace `"your-api-key"` with your cloud service API key before running this
+example. Creating a device does not submit a job; calling the QNode does.
 
 ```python
-import os
 import pennylane as qml
 
 dev = qml.device(
     "kq.emulator",
     wires=2,
     shots=1024,
-    api_key=os.environ["KQ_API_KEY"],
+    api_key="your-api-key",
     target="kisti.emulator",
 )
 
@@ -52,6 +52,23 @@ counts = bell()  # Submits a remote emulator job.
 print(counts)
 ```
 
+To run on the simulator local to the cloud service, use the same device with
+`target="kisti.sim1"`:
+
+```python
+local_sim = qml.device(
+    "kq.emulator",
+    wires=2,
+    shots=1024,
+    api_key="your-api-key",
+    target="kisti.sim1",
+)
+```
+
+Both targets use the cloud API. The `QC-TARGET` header selects which simulator
+the service uses. For `kisti.sim1`, execution takes place on the cloud server;
+the notebook submits the circuit and receives the results.
+
 ## QPU configuration
 
 Use `kq.qpu` with either KRISS target and an explicit wire count or wire labels:
@@ -61,7 +78,7 @@ qpu = qml.device(
     "kq.qpu",
     wires=2,
     shots=1024,
-    api_key=os.environ["KQ_API_KEY"],
+    api_key="your-api-key",
     target="kriss.hw_20q",
 )
 ```
@@ -129,17 +146,20 @@ The plugin sends OpenQASM 2 batches to the KISTI cloud service at
 `https://qc-api.kisti.re.kr/kriss/batch-jobs`. Submission, status, and result
 requests carry `QC-API-KEY` and `QC-TARGET`. For QPU jobs, the cloud service
 routes execution to KRISS `emulator_api`, which uses krios.
+Jobs targeting `kisti.sim1` run on the simulator local to the cloud service.
 
 ## Verification and troubleshooting
 
 Run the offline suites listed in [README testing](README.md#testing). They use
 mocked HTTP responses and do not certify production routing or hardware
-availability. Other scripts in `test/` may submit remote jobs.
+availability. Files prefixed `test_` are offline tests; files prefixed
+`example_` or `benchmark_` submit remote jobs when executed. See the
+[execution examples](README.md#execution-examples-and-benchmarks) for commands.
 
 - **Device not found:** reinstall the checkout with `python -m pip install -e .`
   and restart the Jupyter kernel. Use `kq.emulator` or `kq.qpu`.
 - **Authentication or target error:** check the credential and target code with
-  the cloud service. Keep API keys in environment variables.
+  the cloud service. Replace `"your-api-key"` with your issued API key.
 - **Timeout:** check the submitted job's status in the cloud service. Increase
   `stream_timeout` for longer queues; the timed-out job may still be running.
 - **SSE error:** use `use_streaming=False` for HTTP polling.
